@@ -22,7 +22,7 @@ import { ImageUpload } from '@/components/forms/ImageUpload'
 import { useStore } from '@/store/useStore'
 import { useToast } from '@/context/ToastContext'
 import { adminAPI } from '@/lib/adminAPI'
-import type { MenuItem as MenuItemType, SubCategory, Country } from '@/types'
+import type { MenuItem as MenuItemType } from '@/types'
 
 const schema = z.object({
   name_en: z.string().min(1, 'Name (EN) required'),
@@ -132,7 +132,7 @@ function SortableMenuItemRow({
 }
 
 export function MenuItemsPage() {
-  const { categories, classifications, subcategories, countries, menuItems, addMenuItem, updateMenuItem, deleteMenuItem, reorderMenuItems } = useStore()
+  const { categories, subcategories, countries, menuItems, addMenuItem, updateMenuItem, deleteMenuItem, reorderMenuItems } = useStore()
   const toast = useToast()
 
   const [modalOpen, setModalOpen] = useState(false)
@@ -280,6 +280,7 @@ export function MenuItemsPage() {
         price: data.price,
         category_id: data.category_id,
         subcategory_id: subcategoryId,
+        classification_id: null,
         country_id: countryId,
         image,
         tags,
