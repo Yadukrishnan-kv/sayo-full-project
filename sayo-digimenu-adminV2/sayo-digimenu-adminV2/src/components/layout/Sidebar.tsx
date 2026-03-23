@@ -50,7 +50,6 @@ const navItems = [
   { to: '/banner', icon: ImageIcon, label: 'Banner' },
   { to: '/story', icon: BookOpen, label: 'Story Section' },
   { to: '/categories', icon: FolderTree, label: 'Categories' },
-  { to: '/subcategories', icon: FolderTree, label: 'Sub-Categories' },
   { to: '/countries', icon: Globe, label: 'Countries' },
   { to: '/menu-items', icon: UtensilsCrossed, label: 'Menu Items' },
   { to: '/featured', icon: Star, label: 'Featured Dishes' },

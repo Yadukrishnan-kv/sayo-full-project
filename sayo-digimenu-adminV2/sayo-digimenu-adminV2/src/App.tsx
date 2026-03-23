@@ -10,7 +10,6 @@ import { MenuLayoutPage } from '@/pages/MenuLayout'
 import { BannerPage } from '@/pages/Banner'
 import { StoryPage } from '@/pages/Story'
 import { CategoriesPage } from '@/pages/Categories'
-import { SubCategoriesPage } from '@/pages/SubCategories'
 import { CountriesPage } from '@/pages/Countries'
 import { MenuItemsPage } from '@/pages/MenuItems'
 import { FeaturedPage } from '@/pages/Featured'
@@ -153,7 +152,6 @@ function App() {
             <Route path="banner" element={<BannerPage />} />
             <Route path="story" element={<StoryPage />} />
             <Route path="categories" element={<CategoriesPage />} />
-            <Route path="subcategories" element={<SubCategoriesPage />} />
             <Route path="countries" element={<CountriesPage />} />
             <Route path="menu-items" element={<MenuItemsPage />} />
             <Route path="featured" element={<FeaturedPage />} />
