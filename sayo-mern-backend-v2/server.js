@@ -131,8 +131,15 @@ const makeAbsoluteUrl = (req, url) => {
   if (url.startsWith('http://') || url.startsWith('https://')) return url;
   // Only prefix backend host for uploads; leave other relative assets untouched
   if (url.startsWith('/uploads')) {
-    const protocol = req.protocol;
-    const host = req.get('host');
+    const configuredBaseUrl = process.env.PUBLIC_BASE_URL;
+    if (configuredBaseUrl) {
+      return `${configuredBaseUrl.replace(/\/$/, '')}${url}`;
+    }
+
+    const forwardedProto = req.get('x-forwarded-proto');
+    const forwardedHost = req.get('x-forwarded-host');
+    const protocol = forwardedProto ? forwardedProto.split(',')[0].trim() : req.protocol;
+    const host = forwardedHost ? forwardedHost.split(',')[0].trim() : req.get('host');
     return `${protocol}://${host}${url}`;
   }
   return url;

@@ -7,6 +7,8 @@
 
 import axios, { AxiosInstance } from 'axios'
 
+const ABSOLUTE_URL_REGEX = /^https?:\/\//i
+
 export interface MenuData {
   _id: string
   name_en: string
@@ -123,6 +125,29 @@ export interface MenuLayoutData {
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 
+function toAbsoluteAssetUrl(url?: string): string | undefined {
+  if (!url) return undefined
+  if (ABSOLUTE_URL_REGEX.test(url) || url.startsWith('data:')) return url
+
+  const base = API_BASE_URL.endsWith('/') ? API_BASE_URL.slice(0, -1) : API_BASE_URL
+  const path = url.startsWith('/') ? url : `/${url}`
+  return `${base}${path}`
+}
+
+function normalizeCategory(category: CategoryData): CategoryData {
+  return {
+    ...category,
+    image_url: toAbsoluteAssetUrl(category.image_url),
+  }
+}
+
+function normalizeItem(item: MenuItemData): MenuItemData {
+  return {
+    ...item,
+    image_url: toAbsoluteAssetUrl(item.image_url),
+  }
+}
+
 class CustomerAPIClient {
   private client: AxiosInstance
 
@@ -141,7 +166,10 @@ class CustomerAPIClient {
    */
   async getMenu(): Promise<MenuData[]> {
     const response = await this.client.get<MenuData[]>('/api/public/menu')
-    return response.data
+    return response.data.map((section) => ({
+      ...section,
+      items: (section.items ?? []).map(normalizeItem),
+    }))
   }
 
   /**
@@ -150,7 +178,7 @@ class CustomerAPIClient {
    */
   async getAllMenuItems(): Promise<MenuItemData[]> {
     const response = await this.client.get<MenuItemData[]>('/api/public/menu-items')
-    return response.data
+    return response.data.map(normalizeItem)
   }
 
   /**
@@ -158,7 +186,7 @@ class CustomerAPIClient {
    */
   async getCategories(): Promise<CategoryData[]> {
     const response = await this.client.get<CategoryData[]>('/api/public/categories')
-    return response.data
+    return response.data.map(normalizeCategory)
   }
 
   /**
@@ -174,7 +202,10 @@ class CustomerAPIClient {
    */
   async getBanners(): Promise<{ id: string; title: string; subtitle: string; background_image?: string; enabled?: boolean }[]> {
     const response = await this.client.get<{ id: string; title: string; subtitle: string; background_image?: string; enabled?: boolean }[]>('/api/banners')
-    return response.data
+    return response.data.map((banner) => ({
+      ...banner,
+      background_image: toAbsoluteAssetUrl(banner.background_image),
+    }))
   }
 
   /**
@@ -182,7 +213,10 @@ class CustomerAPIClient {
    */
   async getStory(): Promise<{ id: string; title: string; description: string; background_image?: string }> {
     const response = await this.client.get<{ id: string; title: string; description: string; background_image?: string }>('/api/stories')
-    return response.data
+    return {
+      ...response.data,
+      background_image: toAbsoluteAssetUrl(response.data.background_image),
+    }
   }
 
   /**
@@ -190,7 +224,11 @@ class CustomerAPIClient {
    */
   async getSettings(): Promise<{ id: string; restaurant_name: string; logo_url?: string; favicon_url?: string; theme_mode?: string }> {
     const response = await this.client.get<{ id: string; restaurant_name: string; logo_url?: string; favicon_url?: string; theme_mode?: string }>('/api/settings')
-    return response.data
+    return {
+      ...response.data,
+      logo_url: toAbsoluteAssetUrl(response.data.logo_url),
+      favicon_url: toAbsoluteAssetUrl(response.data.favicon_url),
+    }
   }
 
   /**
@@ -211,7 +249,7 @@ class CustomerAPIClient {
    */
   async getCategory(categoryId: string): Promise<CategoryData> {
     const response = await this.client.get<CategoryData>(`/api/public/categories/${categoryId}`)
-    return response.data
+    return normalizeCategory(response.data)
   }
 
   /**

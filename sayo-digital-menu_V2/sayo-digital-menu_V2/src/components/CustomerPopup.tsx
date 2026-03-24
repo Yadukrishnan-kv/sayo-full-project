@@ -60,7 +60,7 @@ export const CustomerPopup: React.FC<CustomerPopupProps> = ({ open, onClose }) =
           ✕
         </button>
 
-        <h3>Continue to Menu</h3>
+        <h3>Guest Registration</h3>
         <p className="customer-modal-subtitle">Fill in your details to proceed and get personalized experience.</p>
 
         <form onSubmit={handleSubmit} className="customer-modal-form">

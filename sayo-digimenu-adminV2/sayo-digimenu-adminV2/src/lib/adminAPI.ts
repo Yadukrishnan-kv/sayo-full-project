@@ -3,6 +3,43 @@ import type { MenuSection, Category, Classification, SubCategory, Country, MenuI
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ;
 
+type RefValue = string | { id?: string; _id?: string } | null | undefined
+
+const ABSOLUTE_URL_REGEX = /^https?:\/\//i
+
+function toAbsoluteAssetUrl(url: string | undefined | null): string {
+  if (!url) return ''
+  if (ABSOLUTE_URL_REGEX.test(url) || url.startsWith('data:')) return url
+
+  const base = API_BASE_URL.endsWith('/') ? API_BASE_URL.slice(0, -1) : API_BASE_URL
+  const path = url.startsWith('/') ? url : `/${url}`
+  return `${base}${path}`
+}
+
+function normalizeRefId(value: RefValue): string | null {
+  if (!value) return null
+  if (typeof value === 'string') return value
+  return value.id ?? value._id ?? null
+}
+
+function normalizeCategory(category: Category): Category {
+  return {
+    ...category,
+    image: toAbsoluteAssetUrl(category.image),
+  }
+}
+
+function normalizeMenuItem(item: MenuItem): MenuItem {
+  return {
+    ...item,
+    category_id: normalizeRefId(item.category_id as RefValue) ?? '',
+    subcategory_id: normalizeRefId(item.subcategory_id as RefValue),
+    classification_id: normalizeRefId(item.classification_id as RefValue),
+    country_id: normalizeRefId(item.country_id as RefValue),
+    image: toAbsoluteAssetUrl(item.image),
+  }
+}
+
 class AdminAPIClient {
   private client: AxiosInstance
   private token: string | null = null
@@ -94,17 +131,17 @@ class AdminAPIClient {
 
   async getCategories() {
     const response = await this.client.get<Category[]>('/api/categories')
-    return response.data
+    return response.data.map(normalizeCategory)
   }
 
   async createCategory(category: Omit<Category, 'id'>) {
     const response = await this.client.post<Category>('/api/categories', category)
-    return response.data
+    return normalizeCategory(response.data)
   }
 
   async updateCategory(id: string, category: Partial<Category>) {
     const response = await this.client.put<Category>(`/api/categories/${id}`, category)
-    return response.data
+    return normalizeCategory(response.data)
   }
 
   async deleteCategory(id: string) {
@@ -178,22 +215,22 @@ class AdminAPIClient {
 
   async getMenuItems() {
     const response = await this.client.get<MenuItem[]>('/api/menu-items')
-    return response.data
+    return response.data.map(normalizeMenuItem)
   }
 
   async getMenuItem(id: string) {
     const response = await this.client.get<MenuItem>(`/api/menu-items/${id}`)
-    return response.data
+    return normalizeMenuItem(response.data)
   }
 
   async createMenuItem(item: Omit<MenuItem, 'id'>) {
     const response = await this.client.post<MenuItem>('/api/menu-items', item)
-    return response.data
+    return normalizeMenuItem(response.data)
   }
 
   async updateMenuItem(id: string, item: Partial<MenuItem>) {
     const response = await this.client.put<MenuItem>(`/api/menu-items/${id}`, item)
-    return response.data
+    return normalizeMenuItem(response.data)
   }
 
   async deleteMenuItem(id: string) {
@@ -225,41 +262,64 @@ class AdminAPIClient {
 
   async getBanner() {
     const response = await this.client.get<Banner>('/api/banner')
-    return response.data
+    return {
+      ...response.data,
+      background_image: toAbsoluteAssetUrl(response.data.background_image),
+    }
   }
 
   async updateBanner(id: string, banner: Partial<Banner>) {
     const response = await this.client.put<Banner>(`/api/banner/${id}`, banner)
-    return response.data
+    return {
+      ...response.data,
+      background_image: toAbsoluteAssetUrl(response.data.background_image),
+    }
   }
 
   async getStory() {
     const response = await this.client.get<StorySection>('/api/story')
-    return response.data
+    return {
+      ...response.data,
+      background_image: toAbsoluteAssetUrl(response.data.background_image),
+    }
   }
 
   async updateStory(id: string, story: Partial<StorySection>) {
     const response = await this.client.put<StorySection>(`/api/story/${id}`, story)
-    return response.data
+    return {
+      ...response.data,
+      background_image: toAbsoluteAssetUrl(response.data.background_image),
+    }
   }
 
   // ============ SETTINGS ============
 
   async getSettings() {
     const response = await this.client.get<Settings>('/api/settings')
-    return response.data
+    return {
+      ...response.data,
+      logo_url: toAbsoluteAssetUrl(response.data.logo_url),
+      favicon_url: toAbsoluteAssetUrl(response.data.favicon_url),
+    }
   }
 
   async updateSettings(id: string, settings: Partial<Settings>) {
     const response = await this.client.put<Settings>(`/api/settings/${id}`, settings)
-    return response.data
+    return {
+      ...response.data,
+      logo_url: toAbsoluteAssetUrl(response.data.logo_url),
+      favicon_url: toAbsoluteAssetUrl(response.data.favicon_url),
+    }
   }
 
   // ============ MEDIA / UPLOADS ============
 
   async getMedia() {
     const response = await this.client.get<MediaItem[]>('/api/media')
-    return response.data
+    return response.data.map((item) => ({
+      ...item,
+      url: toAbsoluteAssetUrl(item.url),
+    }))
   }
 
   async uploadMedia(dataUrl: string, name?: string, size?: number) {
@@ -268,7 +328,10 @@ class AdminAPIClient {
       name,
       size,
     })
-    return response.data
+    return {
+      ...response.data,
+      url: toAbsoluteAssetUrl(response.data.url),
+    }
   }
 
   async deleteMedia(id: string) {

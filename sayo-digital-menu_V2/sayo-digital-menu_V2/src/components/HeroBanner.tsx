@@ -140,7 +140,7 @@ export const HeroBanner: React.FC = () => {
           onClick={() => setIsModalOpen(true)}
           className="hero__cta"
         >
-          Continue to Menu
+          Guest Registration
         </button>
       </div>
 

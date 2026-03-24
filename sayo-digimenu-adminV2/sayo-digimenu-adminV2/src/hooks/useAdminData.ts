@@ -20,6 +20,9 @@ export function useAdminData(options: UseAdminDataOptions = {}) {
   // Store setters
   const setSections = useStore((s) => s.setSections)
   const setCategories = useStore((s) => s.setCategories)
+  const setClassifications = useStore((s) => s.setClassifications)
+  const setSubCategories = useStore((s) => s.setSubCategories)
+  const setCountries = useStore((s) => s.setCountries)
   const setMenuItems = useStore((s) => s.setMenuItems)
   const setFilters = useStore((s) => s.setFilters)
   const setBanner = useStore((s) => s.setBanner)
@@ -46,9 +49,12 @@ export function useAdminData(options: UseAdminDataOptions = {}) {
     setError(null)
 
     try {
-      const [sections, categories, items, tags, banner, story, settings] = await Promise.all([
+      const [sections, categories, classifications, subcategories, countries, items, tags, banner, story, settings] = await Promise.all([
         adminAPI.getMenuSections(),
         adminAPI.getCategories(),
+        adminAPI.getClassifications(),
+        adminAPI.getSubCategories(),
+        adminAPI.getCountries(),
         adminAPI.getMenuItems(),
         adminAPI.getFilterTags(),
         adminAPI.getBanner(),
@@ -59,6 +65,9 @@ export function useAdminData(options: UseAdminDataOptions = {}) {
       // Update store
       setSections(sections)
       setCategories(categories)
+      setClassifications(classifications)
+      setSubCategories(subcategories)
+      setCountries(countries)
       setMenuItems(items)
       setFilters(tags)
       setBanner(banner)
