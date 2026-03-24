@@ -137,7 +137,7 @@ function App() {
     <ToastProvider>
       <ThemeSync />
       <FaviconSync />
-      <BrowserRouter basename='/admin'>
+      <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route
