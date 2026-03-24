@@ -31,6 +31,7 @@ const schema = z.object({
   description_ar: z.string(),
   price: z.coerce.number().min(0),
   category_id: z.string().min(1, 'Category required'),
+  subcategory_id: z.string().min(1, 'Sub-category is required'),
   country_id: z.string().min(1, 'Country is required'),
   tags: z.string(),
   calories: z.union([z.coerce.number().min(0), z.literal('')]).transform((v) => (v === '' ? null : v)),
@@ -49,6 +50,7 @@ type FormData = z.infer<typeof schema>
 function SortableMenuItemRow({
   item,
   categoryName,
+  subcategoryName,
   countryName,
   onEdit,
   onDelete,
@@ -57,6 +59,7 @@ function SortableMenuItemRow({
 }: {
   item: MenuItemType
   categoryName: string
+  subcategoryName: string
   countryName: string
   onEdit: (i: MenuItemType) => void
   onDelete: (id: string) => void
@@ -92,6 +95,7 @@ function SortableMenuItemRow({
       </td>
       <td className="py-3 font-medium text-[var(--color-text-primary)]">{item.name_en}</td>
       <td className="py-3 text-[var(--color-text-secondary)]">{categoryName}</td>
+      <td className="py-3 text-[var(--color-text-secondary)]">{subcategoryName}</td>
       <td className="py-3 text-[var(--color-text-secondary)]">{countryName}</td>
       <td className="py-3 font-mono text-[var(--color-text-secondary)]">{item.price}</td>
       <td className="py-3">
@@ -128,7 +132,7 @@ function SortableMenuItemRow({
 }
 
 export function MenuItemsPage() {
-  const { categories, countries, menuItems, addMenuItem, updateMenuItem, deleteMenuItem, reorderMenuItems } = useStore()
+  const { categories, subcategories, countries, menuItems, addMenuItem, updateMenuItem, deleteMenuItem, reorderMenuItems } = useStore()
   const toast = useToast()
 
   const [modalOpen, setModalOpen] = useState(false)
@@ -136,27 +140,18 @@ export function MenuItemsPage() {
   const [image, setImage] = useState('')
   const [filterCategory, setFilterCategory] = useState<string>('')
 
-  const getId = (value: string | null | undefined | Record<string, any>) => {
-    if (!value) return ''
-    if (typeof value === 'string') return value
-    if (typeof value === 'object' && value !== null) return (value.id || value._id || '') as string
-    return ''
-  }
-
-  const getCatName = (id: string | null | undefined | Record<string, any>) => {
-    const categoryId = getId(id)
-    return categories.find((c) => c.id === categoryId)?.name_en ?? '–'
-  }
-
-  const getCountryName = (id: string | null | undefined | Record<string, any>) => {
-    const countryId = getId(id)
-    return countryId ? countries.find((c) => c.id === countryId)?.name_en ?? '–' : '–'
-  }
+  const getCatName = (id: string) => categories.find((c) => c.id === id)?.name_en ?? '–'
+  const getSubCategoryName = (id: string | null) =>
+    id ? subcategories.find((c) => c.id === id)?.name_en ?? '–' : '–'
+  const getCountryName = (id: string | null) =>
+    id ? countries.find((c) => c.id === id)?.name_en ?? '–' : '–'
 
   const {
     register,
     handleSubmit,
     reset,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -167,6 +162,11 @@ export function MenuItemsPage() {
       description_ar: '',
       price: 0,
       category_id: categories[0]?.id ?? '',
+      subcategory_id: (() => {
+        const cid = categories[0]?.id ?? ''
+        const subs = subcategories.filter((cl) => cl.category_id === cid).sort((a, b) => a.order - b.order)
+        return subs[0]?.id ?? ''
+      })(),
       country_id: countries[0]?.id ?? '',
       tags: '',
       calories: null,
@@ -181,10 +181,16 @@ export function MenuItemsPage() {
     },
   })
 
+  const selectedCategoryId = watch('category_id')
+  const subcategoriesForCategory = subcategories
+    .filter((cl) => cl.category_id === selectedCategoryId)
+    .sort((a, b) => a.order - b.order)
+
   const openCreate = () => {
     setEditing(null)
     setImage('')
     const firstCategoryId = categories[0]?.id ?? ''
+    const firstSubs = subcategories.filter((cl) => cl.category_id === firstCategoryId).sort((a, b) => a.order - b.order)
     reset({
       name_en: '',
       name_ar: '',
@@ -192,6 +198,7 @@ export function MenuItemsPage() {
       description_ar: '',
       price: 0,
       category_id: firstCategoryId,
+      subcategory_id: firstSubs[0]?.id ?? '',
       country_id: countries[0]?.id ?? '',
       tags: '',
       calories: '' as unknown as number | null,
@@ -210,14 +217,21 @@ export function MenuItemsPage() {
   const openEdit = (item: MenuItemType) => {
     setEditing(item)
     setImage(item.image)
+    const subsForCat = subcategories.filter((cl) => cl.category_id === item.category_id).sort((a, b) => a.order - b.order)
+    const defaultSubId = item.subcategory_id && subsForCat.some((cl) => cl.id === item.subcategory_id)
+      ? item.subcategory_id
+      : item.classification_id && subsForCat.some((cl) => cl.id === item.classification_id)
+      ? item.classification_id
+      : subsForCat[0]?.id ?? ''
     reset({
       name_en: item.name_en,
       name_ar: item.name_ar,
       description_en: item.description_en,
       description_ar: item.description_ar,
       price: item.price,
-      category_id: getId(item.category_id) || '',
-      country_id: getId(item.country_id) || (countries[0]?.id ?? ''),
+      category_id: item.category_id,
+      subcategory_id: defaultSubId,
+      country_id: item.country_id ?? countries[0]?.id ?? '',
       tags: item.tags.join(', '),
       calories: item.calories,
       allergens: item.allergens.join(', '),
@@ -239,6 +253,18 @@ export function MenuItemsPage() {
       ? data.available_days.split(',').map((d) => parseInt(d.trim(), 10)).filter((n) => !isNaN(n) && n >= 0 && n <= 6)
       : []
 
+    if (subcategoriesForCategory.length === 0) {
+      toast('This category has no sub-categories. Add sub-categories first.', 'error')
+      return
+    }
+    const subcategoryId = data.subcategory_id && subcategoriesForCategory.some((cl) => cl.id === data.subcategory_id)
+      ? data.subcategory_id
+      : subcategoriesForCategory[0]?.id ?? null
+    if (!subcategoryId) {
+      toast('Please select a sub-category', 'error')
+      return
+    }
+
     const countryId = data.country_id || (countries[0]?.id ?? null)
     if (!countryId) {
       toast('Please select a country', 'error')
@@ -253,7 +279,7 @@ export function MenuItemsPage() {
         description_ar: data.description_ar,
         price: data.price,
         category_id: data.category_id,
-        subcategory_id: null,
+        subcategory_id: subcategoryId,
         classification_id: null,
         country_id: countryId,
         image,
@@ -426,6 +452,7 @@ export function MenuItemsPage() {
                   <th className="py-3">Image</th>
                   <th className="py-3">Name</th>
                   <th className="py-3">Category</th>
+                  <th className="py-3">Sub-category</th>
                   <th className="py-3">Country</th>
                   <th className="py-3">Price</th>
                   <th className="py-3">Badges</th>
@@ -439,6 +466,7 @@ export function MenuItemsPage() {
                       key={item.id}
                       item={item}
                       categoryName={getCatName(item.category_id)}
+                      subcategoryName={getSubCategoryName(item.subcategory_id ?? item.classification_id ?? null)}
                       countryName={getCountryName(item.country_id ?? null)}
                       onEdit={openEdit}
                       onDelete={onDelete}
@@ -498,7 +526,13 @@ export function MenuItemsPage() {
             <div>
               <label className="mb-1 block text-sm font-medium">Category</label>
               <select
-                {...register('category_id')}
+                {...register('category_id', {
+                  onChange: () => {
+                    const next = watch('category_id')
+                    const nextSubs = subcategories.filter((cl) => cl.category_id === next).sort((a, b) => a.order - b.order)
+                    setValue('subcategory_id', nextSubs[0]?.id ?? '')
+                  },
+                })}
                 className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-4 py-2 text-[var(--color-text-primary)]"
               >
                 {categories.map((c) => (
@@ -506,7 +540,29 @@ export function MenuItemsPage() {
                 ))}
               </select>
             </div>
-
+            <div>
+              <label className="mb-1 block text-sm font-medium">Sub-category (required)</label>
+              <select
+                {...register('subcategory_id')}
+                className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-4 py-2 text-[var(--color-text-primary)]"
+              >
+                {subcategoriesForCategory.length === 0 ? (
+                  <option value="">— Add sub-categories first —</option>
+                ) : (
+                  subcategoriesForCategory.map((cl) => (
+                    <option key={cl.id} value={cl.id}>{cl.name_en}</option>
+                  ))
+                )}
+              </select>
+              {subcategoriesForCategory.length === 0 && (
+                <p className="mt-0.5 text-xs text-amber-600 dark:text-amber-400">
+                  Add sub-categories in Sub-Categories section first.
+                </p>
+              )}
+              {errors.subcategory_id && (
+                <p className="mt-1 text-sm text-red-600">{errors.subcategory_id.message}</p>
+              )}
+            </div>
             <div>
               <label className="mb-1 block text-sm font-medium">Country (required)</label>
               <select
