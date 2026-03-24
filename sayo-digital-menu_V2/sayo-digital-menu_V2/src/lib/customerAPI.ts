@@ -82,6 +82,9 @@ export interface StoryData {
 export interface SettingsData {
   id: string
   restaurant_name: string
+  restaurant_name_ar?: string
+  address_en?: string
+  address_ar?: string
   logo_url?: string
   favicon_url?: string
   theme_mode?: string
@@ -123,7 +126,45 @@ export interface MenuLayoutData {
   order: number
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_URL 
+const API_BASE_URL = (import.meta.env.VITE_API_URL as string | undefined)?.trim() || 'http://localhost:5000'
+
+function extractArray<T>(payload: unknown): T[] {
+  if (Array.isArray(payload)) return payload as T[]
+
+  if (payload && typeof payload === 'object') {
+    const obj = payload as Record<string, unknown>
+    if (typeof obj.error === 'string' && obj.error.trim()) {
+      throw new Error(obj.error)
+    }
+    const candidateKeys = ['data', 'items', 'results', 'rows', 'list', 'categories', 'menu']
+
+    for (const key of candidateKeys) {
+      const value = obj[key]
+      if (Array.isArray(value)) return value as T[]
+    }
+  }
+
+  return []
+}
+
+function extractObject<T>(payload: unknown): T {
+  if (payload === null || payload === undefined) {
+    return {} as T
+  }
+
+  if (typeof payload !== 'object') {
+    return {} as T
+  }
+
+  if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
+    const wrapped = (payload as Record<string, unknown>).data
+    if (wrapped && typeof wrapped === 'object' && !Array.isArray(wrapped)) {
+      return wrapped as T
+    }
+  }
+
+  return payload as T
+}
 
 function toAbsoluteAssetUrl(url?: string): string | undefined {
   if (!url) return undefined
@@ -165,8 +206,10 @@ class CustomerAPIClient {
    * Returns sections with categories and items
    */
   async getMenu(): Promise<MenuData[]> {
-    const response = await this.client.get<MenuData[]>('/api/public/menu')
-    return response.data.map((section) => ({
+    const response = await this.client.get<unknown>('/api/public/menu')
+    const sections = extractArray<MenuData>(response.data)
+
+    return sections.map((section) => ({
       ...section,
       items: (section.items ?? []).map(normalizeItem),
     }))
@@ -177,32 +220,32 @@ class CustomerAPIClient {
    * Useful for filtering and searching
    */
   async getAllMenuItems(): Promise<MenuItemData[]> {
-    const response = await this.client.get<MenuItemData[]>('/api/public/menu-items')
-    return response.data.map(normalizeItem)
+    const response = await this.client.get<unknown>('/api/public/menu-items')
+    return extractArray<MenuItemData>(response.data).map(normalizeItem)
   }
 
   /**
    * Get all categories
    */
   async getCategories(): Promise<CategoryData[]> {
-    const response = await this.client.get<CategoryData[]>('/api/public/categories')
-    return response.data.map(normalizeCategory)
+    const response = await this.client.get<unknown>('/api/public/categories')
+    return extractArray<CategoryData>(response.data).map(normalizeCategory)
   }
 
   /**
    * Get available filter tags
    */
   async getFilterTags(): Promise<FilterTagData[]> {
-    const response = await this.client.get<FilterTagData[]>('/api/public/filter-tags')
-    return response.data
+    const response = await this.client.get<unknown>('/api/public/filter-tags')
+    return extractArray<FilterTagData>(response.data)
   }
 
   /**
    * Get site banner(s)
    */
   async getBanners(): Promise<{ id: string; title: string; subtitle: string; background_image?: string; enabled?: boolean }[]> {
-    const response = await this.client.get<{ id: string; title: string; subtitle: string; background_image?: string; enabled?: boolean }[]>('/api/banners')
-    return response.data.map((banner) => ({
+    const response = await this.client.get<unknown>('/api/banners')
+    return extractArray<{ id: string; title: string; subtitle: string; background_image?: string; enabled?: boolean }>(response.data).map((banner) => ({
       ...banner,
       background_image: toAbsoluteAssetUrl(banner.background_image),
     }))
@@ -212,22 +255,26 @@ class CustomerAPIClient {
    * Get story section content
    */
   async getStory(): Promise<{ id: string; title: string; description: string; background_image?: string }> {
-    const response = await this.client.get<{ id: string; title: string; description: string; background_image?: string }>('/api/stories')
+    const response = await this.client.get<unknown>('/api/stories')
+    const story = extractObject<{ id: string; title: string; description: string; background_image?: string }>(response.data)
+
     return {
-      ...response.data,
-      background_image: toAbsoluteAssetUrl(response.data.background_image),
+      ...story,
+      background_image: toAbsoluteAssetUrl(story.background_image),
     }
   }
 
   /**
    * Get app settings (logo / menu title / theme)
    */
-  async getSettings(): Promise<{ id: string; restaurant_name: string; logo_url?: string; favicon_url?: string; theme_mode?: string }> {
-    const response = await this.client.get<{ id: string; restaurant_name: string; logo_url?: string; favicon_url?: string; theme_mode?: string }>('/api/settings')
+  async getSettings(): Promise<{ id: string; restaurant_name: string; restaurant_name_ar?: string; address_en?: string; address_ar?: string; logo_url?: string; favicon_url?: string; theme_mode?: string }> {
+    const response = await this.client.get<unknown>('/api/settings')
+    const settings = extractObject<{ id: string; restaurant_name: string; restaurant_name_ar?: string; address_en?: string; address_ar?: string; logo_url?: string; favicon_url?: string; theme_mode?: string }>(response.data)
+
     return {
-      ...response.data,
-      logo_url: toAbsoluteAssetUrl(response.data.logo_url),
-      favicon_url: toAbsoluteAssetUrl(response.data.favicon_url),
+      ...settings,
+      logo_url: toAbsoluteAssetUrl(settings.logo_url),
+      favicon_url: toAbsoluteAssetUrl(settings.favicon_url),
     }
   }
 
@@ -235,8 +282,8 @@ class CustomerAPIClient {
    * Get menu layout / sections order
    */
   async getMenuLayout(): Promise<{ id: string; name_en: string; name_ar?: string; order: number }[]> {
-    const response = await this.client.get<{ id: string; name_en: string; name_ar?: string; order: number }[]>('/api/menu-layout')
-    return response.data
+    const response = await this.client.get<unknown>('/api/menu-layout')
+    return extractArray<{ id: string; name_en: string; name_ar?: string; order: number }>(response.data)
   }
 
   async createCustomer(customer: CustomerFormData): Promise<CustomerRecord> {

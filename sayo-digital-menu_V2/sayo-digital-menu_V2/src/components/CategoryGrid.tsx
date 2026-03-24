@@ -3,8 +3,9 @@ import { useMenuContext } from "../context/MenuContext";
 import { CategoryCard } from "./CategoryCard";
 
 export const CategoryGrid: React.FC = () => {
-  const { t } = useTranslation();
-  const { categories, loading, error } = useMenuContext();
+  const { t, i18n } = useTranslation();
+  const { categories, loading, error, settings } = useMenuContext();
+  const isArabic = i18n.language === "ar";
 
   if (loading) {
     return (
@@ -44,7 +45,7 @@ export const CategoryGrid: React.FC = () => {
           {mainCategories.length > 0 && (
           <>
             <h2 className="heading-lg category-grid__heading">
-              Menus
+              {t("menus")}
             </h2>
             <div className="category-grid__row">
               {mainCategories.map((category, index) => (
@@ -59,7 +60,7 @@ export const CategoryGrid: React.FC = () => {
           {specialCategories.length > 0 && (
           <>
             <h3 className="heading-lg category-grid__heading">
-              Special Menus
+              {t("specialMenus")}
             </h3>
             <div className="category-grid__row">
               {specialCategories.map((category, index) => (
@@ -74,7 +75,7 @@ export const CategoryGrid: React.FC = () => {
           {festiveCategories.length > 0 && (
           <>
             <h3 className="heading-lg category-grid__heading">
-              Festive Menus
+              {t("festiveMenus")}
             </h3>
             <div className="category-grid__row">
               {festiveCategories.map((category, index) => (
@@ -105,7 +106,7 @@ export const CategoryGrid: React.FC = () => {
                 fontSize: "1.1rem",
               }}
             >
-              SAYO Jubail
+              {(isArabic ? settings?.restaurant_name_ar : settings?.restaurant_name) || settings?.restaurant_name || settings?.restaurant_name_ar || "SAYO Jubail"}
             </h2>
             <div
               style={{
@@ -123,11 +124,9 @@ export const CategoryGrid: React.FC = () => {
                   gap: "0.4rem",
                 }}
               >
-                <div style={{ fontWeight: 600 }}>Opening Hours</div>
-                <div>5:30 PM – 3:00 AM · Sunday to Saturday</div>
-                <div style={{ fontWeight: 600, marginTop: "0.6rem" }}>Phone</div>
-                <a href="tel:+966000000000">+966 00 000 0000</a>
-                <div style={{ fontWeight: 600, marginTop: "0.6rem" }}>Website</div>
+                <div style={{ fontWeight: 600 }}>{t("openingHours")}</div>
+                <div>{t("openingHoursValue")}</div>
+                <div style={{ fontWeight: 600, marginTop: "0.6rem" }}>{t("website")}</div>
                 <a href="https://www.sayosaudi.com" target="_blank" rel="noreferrer">
                   www.sayosaudi.com
                 </a>
@@ -139,14 +138,12 @@ export const CategoryGrid: React.FC = () => {
                   gap: "0.4rem",
                 }}
               >
-                <div style={{ fontWeight: 600 }}>Address</div>
-                <div>
-                  Al Fanater District,
-                  <br />
-                  Jubail, Saudi Arabia
+                <div style={{ fontWeight: 600 }}>{t("address")}</div>
+                <div style={{ whiteSpace: "pre-line" }}>
+                  {(isArabic ? settings?.address_ar : settings?.address_en) || settings?.address_en || settings?.address_ar || t("defaultAddress")}
                 </div>
-                <div style={{ fontWeight: 600, marginTop: "0.6rem" }}>Other Locations</div>
-                <a href="#">View more SAYO locations</a>
+                <div style={{ fontWeight: 600, marginTop: "0.6rem" }}>{t("otherLocations")}</div>
+                <a href="#">{t("viewMoreLocations")}</a>
               </div>
             </div>
             <div
@@ -157,9 +154,7 @@ export const CategoryGrid: React.FC = () => {
                 lineHeight: 1.6,
               }}
             >
-              Children aged 4–13 need 1,200–1,500 calories on average per day, and
-              individual calorie needs may vary from one person to another. Adults need
-              2,000 calories on average per day.
+              {t("calorieNotice")}
             </div>
           </div>
         </div>

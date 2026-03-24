@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { flushSync } from "react-dom";
 import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { useMenuContext } from "../context/MenuContext";
 import { slugify } from "@/lib/dataConverters";
 import type { MenuItemData, CategoryData } from "@/lib/customerAPI";
@@ -10,8 +9,15 @@ import { DishItem } from "../components/DishItem";
 import { DishModal } from "../components/DishModal";
 import { Footer } from "../components/Footer";
 import { AppIcon } from "../components/AppIcon";
-import { CustomDropdown } from "../components/CustomDropdown";
 import { useFilter } from "../context/FilterContext";
+
+type SubCategoryPayload = {
+  _id?: string;
+  id?: string;
+  name_en?: string;
+  name_ar?: string;
+  category_id?: string;
+};
 
 export const CategoryPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -23,14 +29,14 @@ export const CategoryPage: React.FC = () => {
     return categories.find((c) => slugify(c.name_en) === slug);
   }, [categories, slug]);
 
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isArabic = i18n.language === "ar";
   const { highlightFilters, hiddenAllergens, clearFilters } = useFilter();
 
   const [query, setQuery] = useState("");
   const [activeItem, setActiveItem] = useState<MenuItemData | null>(null);
-  const [selectedClassification, setSelectedClassification] = useState<string | null>(null);
-  const [floatingNavOpen, setFloatingNavOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
+  const [subCategoryNamesById, setSubCategoryNamesById] = useState<Map<string, string>>(new Map());
 
   // Get items for this category
   const items = useMemo(() => {
@@ -38,35 +44,19 @@ export const CategoryPage: React.FC = () => {
     return menuItems.filter((item) => item.category_id === category._id);
   }, [category, menuItems]);
 
-  const classifications = useMemo(() => {
-    const set = new Set<string>();
-    items.forEach((item) => {
-      if (item.section_id?.trim()) set.add(item.section_id.trim());
-    });
-    return Array.from(set).sort();
-  }, [items]);
-
-  const classificationCounts = useMemo(() => {
-    const map = new Map<string, number>();
-    items.forEach((item) => {
-      const key = item.section_id?.trim() || "";
-      if (key) map.set(key, (map.get(key) ?? 0) + 1);
-    });
-    return map;
-  }, [items]);
-
   const itemsByClassification = useMemo(() => {
-    let list = items;
-    const selected = (selectedClassification || "").trim();
-    if (selected) {
-      list = list.filter((item) => (item.section_id || "").trim() === selected);
-    }
-    return list.filter((item) => {
+    return items.filter((item) => {
       if (query.trim()) {
         const q = query.toLowerCase();
+        const nameEn = (item.name_en || "").toLowerCase();
+        const nameAr = (item.name_ar || "").toLowerCase();
+        const descriptionEn = (item.description_en || "").toLowerCase();
+        const descriptionAr = (item.description_ar || "").toLowerCase();
         if (
-          !item.name_en.toLowerCase().includes(q) &&
-          !item.description_en.toLowerCase().includes(q)
+          !nameEn.includes(q) &&
+          !nameAr.includes(q) &&
+          !descriptionEn.includes(q) &&
+          !descriptionAr.includes(q)
         ) {
           return false;
         }
@@ -84,26 +74,79 @@ export const CategoryPage: React.FC = () => {
       }
       return true;
     });
-  }, [items, selectedClassification, query, hiddenAllergens, highlightFilters]);
+  }, [items, query, hiddenAllergens, highlightFilters]);
 
   const sections = useMemo(() => {
-    const bySection = new Map<string, MenuItemData[]>();
+    const bySection = new Map<string, { title: string; items: MenuItemData[] }>();
     itemsByClassification.forEach((item) => {
-      const key = item.section_id || "";
-      if (!bySection.has(key)) bySection.set(key, []);
-      bySection.get(key)!.push(item);
+      const subCategoryId = (item.subcategory_id || "").trim();
+      const sectionId = (item.section_id || "").trim();
+      const rawSection = subCategoryId || sectionId;
+      const sectionKey = rawSection || "other-items";
+      const mappedSubCategoryName = subCategoryId
+        ? subCategoryNamesById.get(subCategoryId)
+        : undefined;
+      const sectionTitle = mappedSubCategoryName || rawSection || "Other Items";
+
+      if (!bySection.has(sectionKey)) {
+        bySection.set(sectionKey, { title: sectionTitle, items: [] });
+      }
+
+      bySection.get(sectionKey)!.items.push(item);
     });
+
     return Array.from(bySection.entries());
-  }, [itemsByClassification]);
+  }, [itemsByClassification, subCategoryNamesById]);
 
   useEffect(() => {
-    setQuery("");
-    setSelectedClassification(null);
+    let isMounted = true;
+
+    const loadSubCategories = async () => {
+      try {
+        const baseUrl = (import.meta.env.VITE_API_URL as string | undefined)?.trim() || "http://localhost:5000";
+        const response = await fetch(`${baseUrl}/api/subcategories`);
+        if (!response.ok) return;
+
+        const payload = await response.json();
+        const list: SubCategoryPayload[] = Array.isArray(payload)
+          ? payload
+          : Array.isArray(payload?.data)
+            ? payload.data
+            : [];
+
+        const mapping = new Map<string, string>();
+        list.forEach((entry) => {
+          const id = (entry._id || entry.id || "").trim();
+          const name = ((isArabic ? entry.name_ar : entry.name_en) || entry.name_en || entry.name_ar || "").trim();
+          if (!id || !name) return;
+
+          if (!category || !entry.category_id || String(entry.category_id) === String(category._id)) {
+            mapping.set(id, name);
+          }
+        });
+
+        if (isMounted) setSubCategoryNamesById(mapping);
+      } catch {
+        if (isMounted) setSubCategoryNamesById(new Map());
+      }
+    };
+
+    loadSubCategories();
+    return () => {
+      isMounted = false;
+    };
+  }, [category, isArabic]);
+
+  useEffect(() => {
+    const persistedQuery = window.sessionStorage.getItem("sayo-search-query") || "";
+    setQuery(persistedQuery);
     clearFilters();
 
     const handleSearchQuery = (event: Event) => {
       const custom = event as CustomEvent<string>;
-      setQuery(custom.detail ?? "");
+      const nextQuery = custom.detail ?? "";
+      setQuery(nextQuery);
+      window.sessionStorage.setItem("sayo-search-query", nextQuery);
     };
 
     window.addEventListener("sayo-search-query", handleSearchQuery as EventListener);
@@ -149,36 +192,17 @@ export const CategoryPage: React.FC = () => {
                   className="heading-xl"
                   style={{ margin: "0 0 0.15rem", fontSize: "1.35rem" }}
                 >
-                  {category.name_en}
+                  {(isArabic ? category.name_ar : category.name_en) || category.name_en || category.name_ar}
                 </h1>
                 <p
                   className="body-sm-muted"
                   style={{ margin: 0, fontSize: "0.88rem" }}
                 >
-                  {category.description_en}
+                  {(isArabic ? category.description_ar : category.description_en) || category.description_en || category.description_ar}
                 </p>
               </header>
 
               <div className="category-page__header-actions">
-                {classifications.length > 0 && (
-                  <div className="category-page__section-dropdown-wrap">
-                    <span className="category-page__section-dropdown-label">{t("selectCategory")}</span>
-                    <CustomDropdown
-                      options={[
-                        { value: null, label: `${t("allClassifications")} (${items.length})` },
-                        ...classifications.map((name) => ({
-                          value: name,
-                          label: `${name} (${classificationCounts.get(name) ?? 0})`,
-                        })),
-                      ]}
-                      value={selectedClassification}
-                      onChange={setSelectedClassification}
-                      placeholder={t("allClassifications")}
-                      className="category-page__section-dropdown"
-                      aria-label={t("allClassifications")}
-                    />
-                  </div>
-                )}
                 <div className="category-page__view-toggle-wrap">
                   <span className="category-page__view-toggle-label">{t("changeView")}</span>
                   <div className="category-page__view-toggle" role="group" aria-label={t("viewMode")}>
@@ -243,19 +267,17 @@ export const CategoryPage: React.FC = () => {
                   : t("noItemsInCategory")}
               </p>
             ) : (
-              sections.map(([sectionName, sectionItems]) => (
+              sections.map(([sectionKey, sectionData]) => (
                 <section
-                  key={sectionName || "default"}
-                  id={sectionName ? `section-${sectionName.replace(/\s+/g, "-")}` : undefined}
+                  key={sectionKey}
+                  id={`section-${sectionKey.replace(/\s+/g, "-")}`}
                   className="category-page__section"
                 >
-                  {sectionName && (
-                    <h2 className="category-page__section-title">{sectionName}</h2>
-                  )}
+                  <h2 className="category-page__section-title">{sectionData.title}</h2>
                   <div
                     className={`category-page__section-grid ${viewMode === "list" ? "category-page__section-grid--list" : ""}`}
                   >
-                    {sectionItems.map((item, index) => (
+                    {sectionData.items.map((item, index) => (
                       <DishItem
                         key={item._id}
                         item={item}
@@ -272,105 +294,6 @@ export const CategoryPage: React.FC = () => {
       </section>
 
       <DishModal item={activeItem} onClose={() => setActiveItem(null)} category={category} />
-
-      {classifications.length > 0 && (
-        <motion.div
-          className="category-page__floating-nav-wrap"
-          initial={{ opacity: 0, x: 72 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: 72 }}
-          transition={{ type: "spring", stiffness: 400, damping: 30 }}
-        >
-          <AnimatePresence>
-            {floatingNavOpen && (
-              <>
-                <motion.div
-                  className="category-page__floating-nav-backdrop"
-                  aria-hidden
-                  onClick={() => setFloatingNavOpen(false)}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                />
-                <motion.aside
-                  className="category-page__floating-nav"
-                  aria-label="Jump to section"
-                  initial={{ opacity: 0, scale: 0.92, y: 8 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.92, y: 8 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                >
-                  <div className="category-page__floating-nav-inner">
-                  <div className="category-page__floating-nav-header">
-                    <span className="category-page__floating-nav-title">{category.name_en}</span>
-                    <span className="category-page__floating-nav-count">{items.length}</span>
-                  </div>
-                  <nav className="category-page__floating-nav-list">
-                    <button
-                      type="button"
-                      className={`category-page__floating-nav-item ${selectedClassification === null ? "category-page__floating-nav-item--active" : ""}`}
-                      onClick={() => {
-                        window.scrollTo({ top: 0, behavior: "smooth" });
-                        flushSync(() => setSelectedClassification(null));
-                        setFloatingNavOpen(false);
-                        setTimeout(() => {
-                          document.querySelector(".category-page__list-shell")?.scrollIntoView({ behavior: "smooth", block: "start" });
-                        }, 80);
-                      }}
-                    >
-                      <span>{t("allClassifications")}</span>
-                      <span className="category-page__floating-nav-item-count">{items.length}</span>
-                    </button>
-                    {classifications.map((name) => (
-                      <button
-                        key={name}
-                        type="button"
-                        className={`category-page__floating-nav-item ${(selectedClassification || "").trim() === (name || "").trim() ? "category-page__floating-nav-item--active" : ""}`}
-                        onClick={() => {
-                          window.scrollTo({ top: 0, behavior: "smooth" });
-                          const value = String(name).trim() || null;
-                          flushSync(() => setSelectedClassification(value));
-                          setFloatingNavOpen(false);
-                          const sectionId = value ? `section-${String(value).replace(/\s+/g, "-")}` : null;
-                          setTimeout(() => {
-                            if (sectionId) document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth", block: "start" });
-                          }, 80);
-                        }}
-                      >
-                        <span>{name}</span>
-                        <span className="category-page__floating-nav-item-count">
-                          {classificationCounts.get(name) ?? 0}
-                        </span>
-                      </button>
-                    ))}
-                  </nav>
-                </div>
-                </motion.aside>
-              </>
-            )}
-          </AnimatePresence>
-          <motion.button
-            type="button"
-            className="category-page__floating-nav-fab"
-            onClick={() => setFloatingNavOpen((o) => !o)}
-            aria-expanded={floatingNavOpen}
-            aria-label={floatingNavOpen ? "Close menu sections" : "Open menu sections"}
-            whileTap={{ scale: 0.92 }}
-            whileHover={{ scale: 1.06 }}
-            transition={{ type: "spring", stiffness: 400, damping: 25 }}
-          >
-            <motion.span
-              className="category-page__floating-nav-fab-icon"
-              aria-hidden
-              animate={{ scale: floatingNavOpen ? 1.1 : 1 }}
-              transition={{ duration: 0.2 }}
-            >
-              <AppIcon name="categoryList" size={22} strokeWidth={2} />
-            </motion.span>
-          </motion.button>
-        </motion.div>
-      )}
 
       </div>
       <Footer />

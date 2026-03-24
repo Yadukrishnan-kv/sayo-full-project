@@ -48,7 +48,11 @@ export const Header: React.FC<HeaderProps> = ({ theme, onThemeChange, scrolled }
         : "/assets/Logo_lgt_EN.svg";
 
   const logoSrc = settings?.logo_url || defaultLogo;
-  const logoAlt = settings?.restaurant_name || t("restaurantName");
+  const logoAlt =
+    (isArabic ? settings?.restaurant_name_ar : settings?.restaurant_name) ||
+    settings?.restaurant_name ||
+    settings?.restaurant_name_ar ||
+    t("restaurantName");
 
   const toggleLanguage = () => {
     const nextLang = i18n.language === "ar" ? "en" : "ar";
@@ -67,8 +71,20 @@ export const Header: React.FC<HeaderProps> = ({ theme, onThemeChange, scrolled }
 
   const handleSearchChange = (value: string) => {
     setSearchValue(value);
+    window.sessionStorage.setItem("sayo-search-query", value);
     window.dispatchEvent(new CustomEvent("sayo-search-query", { detail: value }));
   };
+
+  useEffect(() => {
+    if (!isCategoryPage) {
+      setSearchValue("");
+      window.sessionStorage.removeItem("sayo-search-query");
+      return;
+    }
+
+    const persisted = window.sessionStorage.getItem("sayo-search-query") || "";
+    setSearchValue(persisted);
+  }, [isCategoryPage, location.pathname]);
 
   return (
     <header

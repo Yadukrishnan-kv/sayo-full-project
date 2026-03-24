@@ -635,6 +635,9 @@ app.get('/api/settings', async (req, res) => {
     if (!settings) {
       settings = await Settings.create({
         restaurant_name: 'SAYO Jubail',
+        restaurant_name_ar: 'سايو الجبيل',
+        address_en: 'Al Fanater District, Jubail, Saudi Arabia',
+        address_ar: 'حي الفناتير، الجبيل، المملكة العربية السعودية',
         logo_url: '/assets/Logo_lgt_EN.svg',
         favicon_url: '/assets/Favicon.svg',
         theme_mode: 'light',
@@ -643,6 +646,9 @@ app.get('/api/settings', async (req, res) => {
     res.json({
       id: settings._id.toString(),
       restaurant_name: settings.restaurant_name,
+      restaurant_name_ar: settings.restaurant_name_ar,
+      address_en: settings.address_en,
+      address_ar: settings.address_ar,
       logo_url: makeAbsoluteUrl(req, settings.logo_url),
       favicon_url: makeAbsoluteUrl(req, settings.favicon_url),
       theme_mode: settings.theme_mode,

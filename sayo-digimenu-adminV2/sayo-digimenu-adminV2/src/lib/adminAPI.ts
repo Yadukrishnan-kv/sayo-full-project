@@ -1,11 +1,47 @@
 import axios, { AxiosInstance, AxiosError } from 'axios'
 import type { MenuSection, Category, Classification, SubCategory, Country, MenuItem, Banner, StorySection, FilterTag, Settings, MediaItem } from '@/types'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL ;
+const API_BASE_URL = (import.meta.env.VITE_API_URL as string | undefined)?.trim() || 'http://localhost:5000'
 
 type RefValue = string | { id?: string; _id?: string } | null | undefined
 
 const ABSOLUTE_URL_REGEX = /^https?:\/\//i
+
+function extractArray<T>(payload: unknown): T[] {
+  if (Array.isArray(payload)) return payload as T[]
+
+  if (payload && typeof payload === 'object') {
+    const obj = payload as Record<string, unknown>
+    if (typeof obj.error === 'string' && obj.error.trim()) {
+      throw new Error(obj.error)
+    }
+
+    const candidateKeys = ['data', 'items', 'results', 'rows', 'list']
+    for (const key of candidateKeys) {
+      const value = obj[key]
+      if (Array.isArray(value)) return value as T[]
+    }
+  }
+
+  return []
+}
+
+function extractObject<T>(payload: unknown): T {
+  if (payload === null || payload === undefined) return {} as T
+  if (typeof payload !== 'object') return {} as T
+
+  const obj = payload as Record<string, unknown>
+  if (typeof obj.error === 'string' && obj.error.trim()) {
+    throw new Error(obj.error)
+  }
+
+  const wrapped = obj.data
+  if (wrapped && typeof wrapped === 'object' && !Array.isArray(wrapped)) {
+    return wrapped as T
+  }
+
+  return payload as T
+}
 
 function toAbsoluteAssetUrl(url: string | undefined | null): string {
   if (!url) return ''
@@ -109,8 +145,8 @@ class AdminAPIClient {
   // ============ MENU SECTIONS ============
 
   async getMenuSections() {
-    const response = await this.client.get<MenuSection[]>('/api/menu-sections')
-    return response.data
+    const response = await this.client.get<unknown>('/api/menu-sections')
+    return extractArray<MenuSection>(response.data)
   }
 
   async createMenuSection(section: Omit<MenuSection, 'id'>) {
@@ -130,8 +166,8 @@ class AdminAPIClient {
   // ============ CATEGORIES ============
 
   async getCategories() {
-    const response = await this.client.get<Category[]>('/api/categories')
-    return response.data.map(normalizeCategory)
+    const response = await this.client.get<unknown>('/api/categories')
+    return extractArray<Category>(response.data).map(normalizeCategory)
   }
 
   async createCategory(category: Omit<Category, 'id'>) {
@@ -151,8 +187,8 @@ class AdminAPIClient {
   // ============ CLASSIFICATIONS ============
 
   async getClassifications() {
-    const response = await this.client.get<Classification[]>('/api/classifications')
-    return response.data
+    const response = await this.client.get<unknown>('/api/classifications')
+    return extractArray<Classification>(response.data)
   }
 
   async createClassification(classification: Omit<Classification, 'id'>) {
@@ -172,8 +208,8 @@ class AdminAPIClient {
   // ============ SUBCATEGORIES ============
 
   async getSubCategories() {
-    const response = await this.client.get<SubCategory[]>('/api/subcategories')
-    return response.data
+    const response = await this.client.get<unknown>('/api/subcategories')
+    return extractArray<SubCategory>(response.data)
   }
 
   async createSubCategory(subcategory: Omit<SubCategory, 'id'>) {
@@ -193,8 +229,8 @@ class AdminAPIClient {
   // ============ COUNTRIES ============
 
   async getCountries() {
-    const response = await this.client.get<Country[]>('/api/countries')
-    return response.data
+    const response = await this.client.get<unknown>('/api/countries')
+    return extractArray<Country>(response.data)
   }
 
   async createCountry(country: Omit<Country, 'id'>) {
@@ -214,8 +250,8 @@ class AdminAPIClient {
   // ============ MENU ITEMS ============
 
   async getMenuItems() {
-    const response = await this.client.get<MenuItem[]>('/api/menu-items')
-    return response.data.map(normalizeMenuItem)
+    const response = await this.client.get<unknown>('/api/menu-items')
+    return extractArray<MenuItem>(response.data).map(normalizeMenuItem)
   }
 
   async getMenuItem(id: string) {
@@ -240,8 +276,8 @@ class AdminAPIClient {
   // ============ FILTER TAGS ============
 
   async getFilterTags() {
-    const response = await this.client.get<FilterTag[]>('/api/filter-tags')
-    return response.data
+    const response = await this.client.get<unknown>('/api/filter-tags')
+    return extractArray<FilterTag>(response.data)
   }
 
   async createFilterTag(tag: Omit<FilterTag, 'id'>) {
@@ -261,10 +297,11 @@ class AdminAPIClient {
   // ============ BANNER & STORY ============
 
   async getBanner() {
-    const response = await this.client.get<Banner>('/api/banner')
+    const response = await this.client.get<unknown>('/api/banner')
+    const banner = extractObject<Banner>(response.data)
     return {
-      ...response.data,
-      background_image: toAbsoluteAssetUrl(response.data.background_image),
+      ...banner,
+      background_image: toAbsoluteAssetUrl(banner.background_image),
     }
   }
 
@@ -277,10 +314,11 @@ class AdminAPIClient {
   }
 
   async getStory() {
-    const response = await this.client.get<StorySection>('/api/story')
+    const response = await this.client.get<unknown>('/api/story')
+    const story = extractObject<StorySection>(response.data)
     return {
-      ...response.data,
-      background_image: toAbsoluteAssetUrl(response.data.background_image),
+      ...story,
+      background_image: toAbsoluteAssetUrl(story.background_image),
     }
   }
 
@@ -295,11 +333,12 @@ class AdminAPIClient {
   // ============ SETTINGS ============
 
   async getSettings() {
-    const response = await this.client.get<Settings>('/api/settings')
+    const response = await this.client.get<unknown>('/api/settings')
+    const settings = extractObject<Settings>(response.data)
     return {
-      ...response.data,
-      logo_url: toAbsoluteAssetUrl(response.data.logo_url),
-      favicon_url: toAbsoluteAssetUrl(response.data.favicon_url),
+      ...settings,
+      logo_url: toAbsoluteAssetUrl(settings.logo_url),
+      favicon_url: toAbsoluteAssetUrl(settings.favicon_url),
     }
   }
 
@@ -315,8 +354,8 @@ class AdminAPIClient {
   // ============ MEDIA / UPLOADS ============
 
   async getMedia() {
-    const response = await this.client.get<MediaItem[]>('/api/media')
-    return response.data.map((item) => ({
+    const response = await this.client.get<unknown>('/api/media')
+    return extractArray<MediaItem>(response.data).map((item) => ({
       ...item,
       url: toAbsoluteAssetUrl(item.url),
     }))

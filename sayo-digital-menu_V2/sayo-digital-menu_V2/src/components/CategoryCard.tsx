@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import type { CategoryData } from "@/lib/customerAPI";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 interface Props {
   category: CategoryData;
@@ -8,6 +9,12 @@ interface Props {
 }
 
 export const CategoryCard: React.FC<Props> = ({ category, index }) => {
+  const { i18n } = useTranslation();
+  const isArabic = i18n.language === "ar";
+  const categoryName = (isArabic ? category.name_ar : category.name_en) || category.name_en || category.name_ar;
+  const categoryDescription =
+    (isArabic ? category.description_ar : category.description_en) || category.description_en || category.description_ar;
+
   return (
     <motion.article
       layout
@@ -21,7 +28,7 @@ export const CategoryCard: React.FC<Props> = ({ category, index }) => {
       <Link
         to={`/category/${category.name_en.toLowerCase().replace(/\s+/g, '-')}`}
         className="category-card__link"
-        aria-label={category.name_en}
+        aria-label={categoryName}
       >
         <div
           className="category-card__media"
@@ -39,12 +46,12 @@ export const CategoryCard: React.FC<Props> = ({ category, index }) => {
           <h3
             className="heading-lg category-card__title"
           >
-            {category.name_en}
+            {categoryName}
           </h3>
           <p
             className="body-sm-muted category-card__description"
           >
-            {category.description_en}
+            {categoryDescription}
           </p>
         </div>
       </Link>

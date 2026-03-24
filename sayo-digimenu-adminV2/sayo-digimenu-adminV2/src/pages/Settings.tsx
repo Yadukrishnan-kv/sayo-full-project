@@ -13,6 +13,9 @@ import { adminAPI } from '@/lib/adminAPI'
 
 const schema = z.object({
   restaurant_name: z.string().min(1, 'Restaurant name required'),
+  restaurant_name_ar: z.string().optional(),
+  address_en: z.string().optional(),
+  address_ar: z.string().optional(),
   theme_mode: z.enum(['light', 'dark', 'system']),
 })
 
@@ -31,6 +34,9 @@ export function SettingsPage() {
     resolver: zodResolver(schema),
     defaultValues: {
       restaurant_name: settings.restaurant_name,
+      restaurant_name_ar: settings.restaurant_name_ar || '',
+      address_en: settings.address_en || '',
+      address_ar: settings.address_ar || '',
       theme_mode: settings.theme_mode,
     },
   })
@@ -84,6 +90,37 @@ export function SettingsPage() {
             </label>
             <input
               {...register('restaurant_name')}
+              className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-4 py-2 text-[var(--color-text-primary)]"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-[var(--color-text-secondary)]">
+              Restaurant name (Arabic)
+            </label>
+            <input
+              {...register('restaurant_name_ar')}
+              className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-4 py-2 text-[var(--color-text-primary)]"
+              dir="rtl"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-[var(--color-text-secondary)]">
+              Address (English)
+            </label>
+            <textarea
+              {...register('address_en')}
+              rows={3}
+              className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-4 py-2 text-[var(--color-text-primary)]"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-[var(--color-text-secondary)]">
+              Address (Arabic)
+            </label>
+            <textarea
+              {...register('address_ar')}
+              rows={3}
+              dir="rtl"
               className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-4 py-2 text-[var(--color-text-primary)]"
             />
           </div>

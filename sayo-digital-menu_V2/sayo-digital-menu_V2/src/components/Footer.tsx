@@ -5,7 +5,8 @@ import { useMenuContext } from "../context/MenuContext";
 
 export const Footer: React.FC = () => {
   const year = new Date().getFullYear();
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
+  const isArabic = i18n.language === "ar";
 
   const theme = (document.documentElement.dataset.theme as Theme) || "light";
   const { settings } = useMenuContext();
@@ -19,12 +20,17 @@ export const Footer: React.FC = () => {
         : "/assets/Logo_lgt_EN.svg";
 
   const logoSrc = settings?.logo_url || defaultLogo;
+  const restaurantName =
+    (isArabic ? settings?.restaurant_name_ar : settings?.restaurant_name) ||
+    settings?.restaurant_name ||
+    settings?.restaurant_name_ar ||
+    t("restaurantName");
 
   return (
     <footer className="footer">
       <div className="container footer__inner">
-        <img src={logoSrc} alt="SAYO" className="footer__logo" />
-        <div>© {year} SAYO. All rights reserved.</div>
+        <img src={logoSrc} alt={restaurantName} className="footer__logo" />
+        <div>{t("footerRights", { year, restaurant: restaurantName })}</div>
         <div className="footer__social">
           <a
             href="#"

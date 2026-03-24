@@ -18,6 +18,9 @@ const defaultStory: StorySection = {
 const defaultSettings: Settings = {
   id: undefined,
   restaurant_name: '',
+  restaurant_name_ar: '',
+  address_en: '',
+  address_ar: '',
   logo_url: '',
   favicon_url: '',
   theme_mode: 'light',

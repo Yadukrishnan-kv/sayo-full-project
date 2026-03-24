@@ -34,16 +34,21 @@ interface Props {
 }
 
 export const DishItem: React.FC<Props> = ({ item, onOpen, index }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isArabic = i18n.language === "ar";
+  const itemName = (isArabic ? item.name_ar : item.name_en) || item.name_en || item.name_ar;
+  const itemDescription =
+    (isArabic ? item.description_ar : item.description_en) || item.description_en || item.description_ar;
 
   const firstTag = item.tags?.[0];
+  const tagLabels: Record<string, string> = {
+    chef_special: t("chefSpecial"),
+    chefSignature: t("chefSignature"),
+    popular: t("popular"),
+    new: t("new"),
+  };
   const tagLabel = firstTag
-    ? {
-        chef_special: t("chefSpecial"),
-        chefSignature: t("chefSignature"),
-        popular: t("popular"),
-        new: t("new"),
-      }[firstTag as keyof typeof firstTag]
+    ? tagLabels[firstTag]
     : undefined;
   const isChefSignature = firstTag === "chefSignature";
 
@@ -80,7 +85,7 @@ export const DishItem: React.FC<Props> = ({ item, onOpen, index }) => {
         />
         <div className="dish-item__content">
           <div className="dish-item__title-row">
-            <h3 className="dish-item__heading">{item.name_en}</h3>
+            <h3 className="dish-item__heading">{itemName}</h3>
             <div className="dish-item__price-wrap">
               <AppIcon name="price" size={14} strokeWidth={2} className="dish-item__price-icon" aria-hidden />
               <span className="price dish-item__price">
@@ -98,7 +103,7 @@ export const DishItem: React.FC<Props> = ({ item, onOpen, index }) => {
               {tagLabel}
             </span>
           )}
-          <p className="dish-item__description">{item.description_en}</p>
+          <p className="dish-item__description">{itemDescription}</p>
           <div className="dish-item__meta">
             {countryCode && (
               <IconWithTooltip

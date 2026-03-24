@@ -91,6 +91,9 @@ export interface MediaItem {
 export interface Settings {
   id?: string
   restaurant_name: string
+  restaurant_name_ar?: string
+  address_en?: string
+  address_ar?: string
   logo_url: string
   favicon_url: string
   theme_mode: 'light' | 'dark' | 'system'

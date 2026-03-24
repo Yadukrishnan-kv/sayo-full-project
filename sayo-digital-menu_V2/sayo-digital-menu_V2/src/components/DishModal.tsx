@@ -20,6 +20,7 @@ const SPICE_LABELS: Record<number, string> = {
 
 const MODAL_BAR_BG = "#1e3a5f";
 const MODAL_TAB_ACTIVE_BG = "#1e3a5f";
+const FALLBACK_DISH_IMAGE = "https://images.pexels.com/photos/958546/pexels-photo-958546.jpeg?auto=compress&cs=tinysrgb&w=1200";
 
 interface Props {
   item: MenuItemData | null;
@@ -28,15 +29,21 @@ interface Props {
 }
 
 export const DishModal: React.FC<Props> = ({ item, onClose, category }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [activeTab, setActiveTab] = useState<"description" | "information">("description");
 
   if (!item) return null;
 
+  const isArabic = i18n.language === "ar";
   const isChefSignature = item.tags?.includes("chef_special");
   const countryCode = getCountryCodeForItem(item);
   const isVegetarian = isVegetarianSection(item.section_id);
-  const categoryName = category?.name_en || item.section_id || item.category_id || "Menu";
+  const itemName = (isArabic ? item.name_ar : item.name_en) || item.name_en || item.name_ar;
+  const itemDescription =
+    (isArabic ? item.description_ar : item.description_en) || item.description_en || item.description_ar;
+  const categoryName =
+    (isArabic ? category?.name_ar : category?.name_en) || category?.name_en || category?.name_ar || item.section_id || item.category_id || "Menu";
+  const dishImage = item.image_url || FALLBACK_DISH_IMAGE;
 
   return (
     <AnimatePresence>
@@ -66,7 +73,7 @@ export const DishModal: React.FC<Props> = ({ item, onClose, category }) => {
             <div
               className="dish-modal__image"
               style={{
-                backgroundImage: "url('https://images.pexels.com/photos/958546/pexels-photo-958546.jpeg?auto=compress&cs=tinysrgb&w=1200')",
+                backgroundImage: `url('${dishImage}')`,
               }}
             />
           </div>
@@ -95,7 +102,7 @@ export const DishModal: React.FC<Props> = ({ item, onClose, category }) => {
               <>
                 <div className="dish-modal__title-row">
                   <div className="dish-modal__title-block">
-                    <h2 id="dish-modal-title" className="dish-modal__title">{item.name_en}</h2>
+                    <h2 id="dish-modal-title" className="dish-modal__title">{itemName}</h2>
                     {item.section_id && (
                       <p className="dish-modal__sub">{item.section_id}</p>
                     )}
@@ -132,7 +139,7 @@ export const DishModal: React.FC<Props> = ({ item, onClose, category }) => {
                     </span>
                   ))}
                 </div>
-                <p className="dish-modal__description">{item.description_en}</p>
+                <p className="dish-modal__description">{itemDescription}</p>
               </>
             )}
             {activeTab === "information" && (
