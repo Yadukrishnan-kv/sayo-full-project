@@ -197,7 +197,8 @@ export const CategoryPage: React.FC = () => {
         }
       }
       if (hiddenAllergens.length > 0) {
-        const matchesSelectedAllergen = hiddenAllergens.some((allergen) =>
+        const allergenFilters = hiddenAllergens;
+        const matchesSelectedAllergen = allergenFilters.some((allergen) =>
           itemMatchesHiddenAllergen(item, allergen),
         );
 
@@ -206,10 +207,40 @@ export const CategoryPage: React.FC = () => {
         }
       }
       if (highlightFilters.length > 0) {
-        const matchesHighlight = highlightFilters.every((selectedFilter) =>
-          itemMatchesSelectedFilter(item, selectedFilter, countryNamesById),
+        const spiceFilters = highlightFilters.filter((tag) => tag === "hot" || tag === "extraHot");
+        const badgeFilters = highlightFilters.filter(
+          (tag) => tag === "chefSignature" || tag === "chef_special" || tag === "popular" || tag === "new",
         );
-        if (!matchesHighlight) return false;
+        const baseTagFilters = highlightFilters.filter(
+          (tag) =>
+            tag !== "hot" &&
+            tag !== "extraHot" &&
+            tag !== "chefSignature" &&
+            tag !== "chef_special" &&
+            tag !== "popular" &&
+            tag !== "new",
+        );
+
+        if (baseTagFilters.length > 0) {
+          const matchesBaseTags = baseTagFilters.some((selectedFilter) =>
+            itemMatchesSelectedFilter(item, selectedFilter, countryNamesById),
+          );
+          if (!matchesBaseTags) return false;
+        }
+
+        if (badgeFilters.length > 0) {
+          const matchesBadges = badgeFilters.some((selectedFilter) =>
+            itemMatchesSelectedFilter(item, selectedFilter, countryNamesById),
+          );
+          if (!matchesBadges) return false;
+        }
+
+        if (spiceFilters.length > 0) {
+          const matchesSpice = spiceFilters.some((selectedFilter) =>
+            itemMatchesSelectedFilter(item, selectedFilter, countryNamesById),
+          );
+          if (!matchesSpice) return false;
+        }
       }
       return true;
     });
