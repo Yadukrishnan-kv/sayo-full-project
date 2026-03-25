@@ -64,6 +64,8 @@ export const DishItem: React.FC<Props> = ({ item, onOpen, index, resolvedCountry
   const isVegetarian = isVegetarianSection(item.section_id);
   /** 0 = mild, 1 = medium, 2 = hot, 3 = extra hot; show on every card, default mild */
   const spiceLevel = item.spice_level ?? 0;
+  const calorieValue = Number(item.calories);
+  const showCalories = Number.isFinite(calorieValue) && calorieValue >= 1;
 
   return (
     <motion.button
@@ -144,11 +146,11 @@ export const DishItem: React.FC<Props> = ({ item, onOpen, index, resolvedCountry
                 <span className="dish-item__spice-label">{t(SPICE_LABELS[spiceLevel] ?? "spiceLevelMild")}</span>
               </span>
             </IconWithTooltip>
-            {item.calories != null && (
-              <IconWithTooltip label={`${item.calories} ${t("calories")}`}>
+            {showCalories && (
+              <IconWithTooltip label={`${calorieValue} ${t("calories")}`}>
                 <span className="dish-item__calories-wrap">
                   <AppIcon name="calories" size={14} strokeWidth={2} className="dish-item__calories-icon" aria-hidden />
-                  <span className="dish-item__calories">{item.calories} {t("calories")}</span>
+                  <span className="dish-item__calories">{calorieValue} {t("calories")}</span>
                 </span>
               </IconWithTooltip>
             )}

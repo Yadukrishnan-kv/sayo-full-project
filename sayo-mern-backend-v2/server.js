@@ -137,6 +137,23 @@ const normalizeMenuItemTags = (body) => {
   body.tags = tagList;
 };
 
+const normalizeCategoryBody = (input) => {
+  const body = { ...(input || {}) };
+
+  if (Object.prototype.hasOwnProperty.call(body, 'description') && !Object.prototype.hasOwnProperty.call(body, 'description_en')) {
+    body.description_en = String(body.description ?? '');
+  }
+
+  delete body.description;
+  return body;
+};
+
+const mapCategoryForAdmin = (req, category) => ({
+  ...toPlain(category),
+  description: category.description_en || category.description_ar || '',
+  image: makeAbsoluteUrl(req, category.image),
+});
+
 const ensureDefaultAdmin = async () => {
   try {
     const adminExists = await User.findOne({ email: process.env.ADMIN_EMAIL });
@@ -313,10 +330,7 @@ app.delete('/api/menu-sections/:id', authMiddleware, async (req, res) => {
 app.get('/api/categories', async (req, res) => {
   try {
     const categories = await Category.find().sort({ order: 1 });
-    res.json(categories.map((category) => ({
-      ...toPlain(category),
-      image: makeAbsoluteUrl(req, category.image),
-    })));
+    res.json(categories.map((category) => mapCategoryForAdmin(req, category)));
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -324,16 +338,13 @@ app.get('/api/categories', async (req, res) => {
 
 app.post('/api/categories', authMiddleware, async (req, res) => {
   try {
-    const body = { ...req.body };
+    const body = normalizeCategoryBody(req.body);
     if (body.image) {
       body.image = await saveBase64Image(body.image, 'categories');
     }
     const category = await Category.create(body);
     await logActivity(req, req.user.email, 'categories', 'create', category._id, category);
-    res.status(201).json({
-      ...toPlain(category),
-      image: makeAbsoluteUrl(req, category.image),
-    });
+    res.status(201).json(mapCategoryForAdmin(req, category));
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -341,16 +352,13 @@ app.post('/api/categories', authMiddleware, async (req, res) => {
 
 app.put('/api/categories/:id', authMiddleware, async (req, res) => {
   try {
-    const body = { ...req.body };
+    const body = normalizeCategoryBody(req.body);
     if (body.image) {
       body.image = await saveBase64Image(body.image, 'categories');
     }
     const category = await Category.findByIdAndUpdate(req.params.id, body, { new: true });
     await logActivity(req, req.user.email, 'categories', 'update', category._id, body);
-    res.json({
-      ...toPlain(category),
-      image: makeAbsoluteUrl(req, category.image),
-    });
+    res.json(mapCategoryForAdmin(req, category));
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -875,8 +883,9 @@ const mapCategoryForPublic = (req, category) => ({
   _id: category._id.toString(),
   name_en: category.name_en,
   name_ar: category.name_ar,
-  description_en: category.description_en,
-  description_ar: category.description_ar,
+  description_en: category.description_en || category.description || '',
+  description_ar: category.description_ar || category.description_en || category.description || '',
+  description: category.description_en || category.description_ar || category.description || '',
   image_url: makeAbsoluteUrl(req, category.image),
   slug: category.slug,
   group: category.group,

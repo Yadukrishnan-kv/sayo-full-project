@@ -9,6 +9,7 @@ import { DishItem } from "../components/DishItem";
 import { DishModal } from "../components/DishModal";
 import { Footer } from "../components/Footer";
 import { AppIcon } from "../components/AppIcon";
+import { CustomDropdown, type CustomDropdownOption } from "../components/CustomDropdown";
 import { useFilter } from "../context/FilterContext";
 
 type SubCategoryPayload = {
@@ -169,9 +170,22 @@ export const CategoryPage: React.FC = () => {
   const [query, setQuery] = useState("");
   const [activeItem, setActiveItem] = useState<MenuItemData | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
+  const [selectedSubCategoryId, setSelectedSubCategoryId] = useState<string | null>(null);
+  const [floatingNavOpen, setFloatingNavOpen] = useState(false);
   const [subCategoryNamesById, setSubCategoryNamesById] = useState<Map<string, string>>(new Map());
   const [countryNamesById, setCountryNamesById] = useState<Map<string, string>>(new Map());
   const [subCategoriesLoaded, setSubCategoriesLoaded] = useState(false);
+
+  const subCategoryOptions = useMemo<CustomDropdownOption[]>(() => {
+    const entries = Array.from(subCategoryNamesById.entries()).sort((a, b) =>
+      a[1].localeCompare(b[1], isArabic ? "ar" : "en", { sensitivity: "base" }),
+    );
+
+    return [
+      { value: null, label: t("allClassifications") },
+      ...entries.map(([id, label]) => ({ value: id, label })),
+    ];
+  }, [subCategoryNamesById, t, isArabic]);
 
   // Get items for this category
   const items = useMemo(() => {
@@ -179,8 +193,48 @@ export const CategoryPage: React.FC = () => {
     return menuItems.filter((item) => item.category_id === category._id);
   }, [category, menuItems]);
 
+  const floatingNavEntries = useMemo(() => {
+    const countsBySubCategoryId = new Map<string, { label: string; count: number }>();
+
+    items.forEach((item) => {
+      const subCategoryId = (item.subcategory_id || "").trim();
+      if (!subCategoryId) return;
+
+      const label = subCategoryNamesById.get(subCategoryId) || (subCategoriesLoaded ? "Other Items" : "");
+      if (!label) return;
+
+      const current = countsBySubCategoryId.get(subCategoryId);
+      if (current) {
+        current.count += 1;
+      } else {
+        countsBySubCategoryId.set(subCategoryId, { label, count: 1 });
+      }
+    });
+
+    return Array.from(countsBySubCategoryId.entries())
+      .map(([id, data]) => ({ id, ...data }))
+      .sort((a, b) => a.label.localeCompare(b.label, isArabic ? "ar" : "en", { sensitivity: "base" }));
+  }, [items, subCategoryNamesById, subCategoriesLoaded, isArabic]);
+
+  const handleSelectSubCategory = (subCategoryId: string | null) => {
+    setSelectedSubCategoryId(subCategoryId);
+    setFloatingNavOpen(false);
+
+    const resultsShell = document.querySelector(".category-page__list-shell");
+    if (resultsShell instanceof HTMLElement) {
+      resultsShell.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
   const itemsByClassification = useMemo(() => {
     return items.filter((item) => {
+      if (selectedSubCategoryId) {
+        const itemSubCategoryId = (item.subcategory_id || "").trim();
+        if (itemSubCategoryId !== selectedSubCategoryId) {
+          return false;
+        }
+      }
+
       if (query.trim()) {
         const q = query.toLowerCase();
         const nameEn = (item.name_en || "").toLowerCase();
@@ -244,7 +298,7 @@ export const CategoryPage: React.FC = () => {
       }
       return true;
     });
-  }, [items, query, hiddenAllergens, highlightFilters, countryNamesById]);
+  }, [items, selectedSubCategoryId, query, hiddenAllergens, highlightFilters, countryNamesById]);
 
   const sections = useMemo(() => {
     const bySection = new Map<string, { title: string; items: MenuItemData[] }>();
@@ -355,6 +409,8 @@ export const CategoryPage: React.FC = () => {
   useEffect(() => {
     const persistedQuery = window.sessionStorage.getItem("sayo-search-query") || "";
     setQuery(persistedQuery);
+    setSelectedSubCategoryId(null);
+    setFloatingNavOpen(false);
     clearFilters();
 
     const handleSearchQuery = (event: Event) => {
@@ -418,6 +474,17 @@ export const CategoryPage: React.FC = () => {
               </header>
 
               <div className="category-page__header-actions">
+                <div className="category-page__section-dropdown-wrap">
+                  <span className="category-page__section-dropdown-label">{t("selectCategory")}</span>
+                  <CustomDropdown
+                    options={subCategoryOptions}
+                    value={selectedSubCategoryId}
+                    onChange={setSelectedSubCategoryId}
+                    placeholder={t("allClassifications")}
+                    aria-label={t("selectCategory")}
+                  />
+                </div>
+
                 <div className="category-page__view-toggle-wrap">
                   <span className="category-page__view-toggle-label">{t("changeView")}</span>
                   <div className="category-page__view-toggle" role="group" aria-label={t("viewMode")}>
@@ -510,6 +577,69 @@ export const CategoryPage: React.FC = () => {
           </div>
         </div>
       </section>
+
+      {items.length > 0 && (
+        <div className="category-page__floating-nav-wrap">
+          {floatingNavOpen && (
+            <button
+              type="button"
+              className="category-page__floating-nav-backdrop"
+              aria-label={t("close") || "Close"}
+              onClick={() => setFloatingNavOpen(false)}
+            />
+          )}
+
+          {floatingNavOpen && (
+            <div id="category-floating-nav" className="category-page__floating-nav" role="dialog" aria-label={t("selectCategory")}>
+              <div className="category-page__floating-nav-inner scroll-y-soft">
+                <div className="category-page__floating-nav-header">
+                  <span className="category-page__floating-nav-title">
+                    {(isArabic ? category.name_ar : category.name_en) || category.name_en || category.name_ar}
+                  </span>
+                  <span className="category-page__floating-nav-count">{items.length}</span>
+                </div>
+
+                <ul className="category-page__floating-nav-list">
+                  <li>
+                    <button
+                      type="button"
+                      className={`category-page__floating-nav-item ${selectedSubCategoryId === null ? "category-page__floating-nav-item--active" : ""}`}
+                      onClick={() => handleSelectSubCategory(null)}
+                    >
+                      <span>{t("allClassifications")}</span>
+                      <span className="category-page__floating-nav-item-count">{items.length}</span>
+                    </button>
+                  </li>
+
+                  {floatingNavEntries.map((entry) => (
+                    <li key={entry.id}>
+                      <button
+                        type="button"
+                        className={`category-page__floating-nav-item ${selectedSubCategoryId === entry.id ? "category-page__floating-nav-item--active" : ""}`}
+                        onClick={() => handleSelectSubCategory(entry.id)}
+                      >
+                        <span>{entry.label}</span>
+                        <span className="category-page__floating-nav-item-count">{entry.count}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+
+          <button
+            type="button"
+            className="category-page__floating-nav-fab"
+            aria-label={t("selectCategory")}
+            onClick={() => setFloatingNavOpen((prev) => !prev)}
+            aria-expanded={floatingNavOpen}
+            aria-controls="category-floating-nav"
+          >
+            <AppIcon name="categoryList" size={22} className="category-page__floating-nav-fab-icon" aria-hidden />
+          </button>
+        </div>
+      )}
 
       <DishModal item={activeItem} onClose={() => setActiveItem(null)} category={category} />
 

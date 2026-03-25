@@ -1655,6 +1655,27 @@ body {
   max-height: inherit;
   overflow-y: auto;
   scrollbar-width: thin;
+  scrollbar-color: #b48a4a #a67c42;
+
+  // Webkit browsers (Chrome, Safari, Edge)
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: #a67c42;
+    border-radius: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #b48a4a;
+    border-radius: 4px;
+    border: 2px solid #a67c42;
+
+    &:hover {
+      background: #c99b54;
+    }
+  }
 }
 
 .category-page__floating-nav-header {

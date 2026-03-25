@@ -38,7 +38,14 @@ export const Header: React.FC<HeaderProps> = ({ theme, onThemeChange, scrolled }
 
   const { settings } = useMenuContext();
   const isArabic = i18n.language === "ar";
-  const defaultLogo = isArabic ? "/assets/Logo_AR.svg" : "/assets/Logo_EN.svg";
+  const defaultLogo =
+    theme === "light"
+      ? isArabic
+        ? "/assets/Logo_AR.svg"
+        : "/assets/Logo_EN.svg"
+      : isArabic
+        ? "/assets/Logo_lgt_AR.svg"
+        : "/assets/Logo_lgt_EN.svg";
 
   const logoSrc = settings?.logo_url || defaultLogo;
   const logoAlt =
