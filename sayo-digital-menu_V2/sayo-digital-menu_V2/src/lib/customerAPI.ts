@@ -41,6 +41,8 @@ export interface MenuItemData {
   allergens?: string[]
   tags?: string[]
   country_code?: string
+  country_name_en?: string
+  country_name_ar?: string
   spice_level?: number
   visible: boolean
   order: number
@@ -75,7 +77,9 @@ export interface BannerData {
 export interface StoryData {
   id: string
   title: string
+  title_ar?: string
   description: string
+  description_ar?: string
   background_image?: string
 }
 
@@ -131,6 +135,7 @@ const API_BASE_URL = (import.meta.env.VITE_API_URL as string)?.trim();
 if (!API_BASE_URL) {
   throw new Error('VITE_API_URL is not defined in the environment!');
 }
+
 function extractArray<T>(payload: unknown): T[] {
   if (Array.isArray(payload)) return payload as T[]
 
@@ -257,9 +262,9 @@ class CustomerAPIClient {
   /**
    * Get story section content
    */
-  async getStory(): Promise<{ id: string; title: string; description: string; background_image?: string }> {
+  async getStory(): Promise<{ id: string; title: string; title_ar?: string; description: string; description_ar?: string; background_image?: string }> {
     const response = await this.client.get<unknown>('/api/stories')
-    const story = extractObject<{ id: string; title: string; description: string; background_image?: string }>(response.data)
+    const story = extractObject<{ id: string; title: string; title_ar?: string; description: string; description_ar?: string; background_image?: string }>(response.data)
 
     return {
       ...story,

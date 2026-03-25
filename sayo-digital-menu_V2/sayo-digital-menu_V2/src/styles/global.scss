@@ -215,6 +215,17 @@ body {
   padding-block: 0.6rem;
 }
 
+.header__logo {
+  display: block;
+  height: 32px;
+  width: auto;
+  max-width: min(46vw, 220px);
+  object-fit: contain;
+  opacity: 1;
+  filter: none !important;
+  mix-blend-mode: normal;
+}
+
 .header__actions {
   display: flex;
   align-items: center;

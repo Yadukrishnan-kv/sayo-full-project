@@ -45,12 +45,30 @@ const MenuItemSchema = new mongoose.Schema(
       ref: 'Country',
     },
 
+    // Country name snapshot to keep filter-friendly values even if relation changes
+    country_name_en: String,
+    country_name_ar: String,
+
     // Nutrition & Allergens
     calories: Number,
     allergens: [String], // dairy, nuts, gluten, honey, etc.
 
     // Tags & Categorization
     tags: [String], // chef_special, popular, recommended, vegan, vegetarian, etc.
+
+    // Badge flags used by admin panel
+    chef_special: {
+      type: Boolean,
+      default: false,
+    },
+    popular: {
+      type: Boolean,
+      default: false,
+    },
+    recommended: {
+      type: Boolean,
+      default: false,
+    },
 
     // Country/Cuisine indicator (ISO 3166-1 alpha-2 code)
     country_code: String,

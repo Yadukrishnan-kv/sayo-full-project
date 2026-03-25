@@ -50,6 +50,93 @@ const toPlain = (doc) => {
   return doc ? { ...doc.toObject(), id: doc._id } : null;
 };
 
+const getIdValue = (value) => {
+  if (!value) return null;
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object' && value._id) return value._id.toString();
+  return null;
+};
+
+const attachCountrySnapshot = async (body) => {
+  const countryId = getIdValue(body.country_id);
+
+  if (!countryId) {
+    body.country_id = null;
+    body.country_name_en = null;
+    body.country_name_ar = null;
+    return;
+  }
+
+  const country = await Country.findById(countryId);
+  if (!country) {
+    throw new Error('Invalid country_id');
+  }
+
+  body.country_id = country._id;
+  body.country_name_en = country.name_en;
+  body.country_name_ar = country.name_ar;
+};
+
+const normalizeTagToken = (value) => String(value || '')
+  .toLowerCase()
+  .trim()
+  .replace(/&/g, ' and ')
+  .replace(/[^a-z0-9]+/g, '');
+
+const normalizeMenuItemTags = (body) => {
+  const tagList = Array.isArray(body.tags)
+    ? body.tags.map((tag) => String(tag || '').trim()).filter(Boolean)
+    : [];
+
+  const indexByToken = new Map();
+  tagList.forEach((tag, idx) => {
+    indexByToken.set(normalizeTagToken(tag), idx);
+  });
+
+  const upsertTag = (label, tokens, enabled) => {
+    const matchingIndexes = [];
+    tokens.forEach((token) => {
+      const idx = indexByToken.get(token);
+      if (typeof idx === 'number') matchingIndexes.push(idx);
+    });
+
+    if (enabled) {
+      if (matchingIndexes.length === 0) {
+        tagList.push(label);
+        indexByToken.set(normalizeTagToken(label), tagList.length - 1);
+      } else {
+        const first = matchingIndexes[0];
+        tagList[first] = label;
+      }
+      return;
+    }
+
+    if (matchingIndexes.length > 0) {
+      const removeIndexSet = new Set(matchingIndexes);
+      const filtered = tagList.filter((_, idx) => !removeIndexSet.has(idx));
+      tagList.length = 0;
+      filtered.forEach((tag) => tagList.push(tag));
+      indexByToken.clear();
+      tagList.forEach((tag, idx) => {
+        indexByToken.set(normalizeTagToken(tag), idx);
+      });
+    }
+  };
+
+  const hasBadgeFlags =
+    Object.prototype.hasOwnProperty.call(body, 'chef_special') ||
+    Object.prototype.hasOwnProperty.call(body, 'popular') ||
+    Object.prototype.hasOwnProperty.call(body, 'recommended');
+
+  if (hasBadgeFlags) {
+    upsertTag('Chef Special', ['chefspecial', 'chefsignature', 'chefspecialty', 'chefspeciality'], Boolean(body.chef_special));
+    upsertTag('Popular', ['popular'], Boolean(body.popular));
+    upsertTag('Recommended', ['recommended', 'chefselection', 'chefsselection'], Boolean(body.recommended));
+  }
+
+  body.tags = tagList;
+};
+
 const ensureDefaultAdmin = async () => {
   try {
     const adminExists = await User.findOne({ email: process.env.ADMIN_EMAIL });
@@ -446,6 +533,8 @@ app.post('/api/menu-items', authMiddleware, async (req, res) => {
     if (body.image) {
       body.image = await saveBase64Image(body.image, 'menu-items');
     }
+    normalizeMenuItemTags(body);
+    await attachCountrySnapshot(body);
     const item = await MenuItem.create(body);
     await logActivity(req, req.user.email, 'menu-items', 'create', item._id, item);
     res.status(201).json({
@@ -465,6 +554,10 @@ app.put('/api/menu-items/:id', authMiddleware, async (req, res) => {
     }
     if (body.image) {
       body.image = await saveBase64Image(body.image, 'menu-items');
+    }
+    normalizeMenuItemTags(body);
+    if (Object.prototype.hasOwnProperty.call(body, 'country_id')) {
+      await attachCountrySnapshot(body);
     }
     const item = await MenuItem.findByIdAndUpdate(req.params.id, body, { new: true });
     await logActivity(req, req.user.email, 'menu-items', 'update', item._id, body);
@@ -805,6 +898,8 @@ const mapMenuItemForPublic = (req, item) => ({
   allergens: item.allergens,
   tags: item.tags,
   country_code: item.country_code,
+  country_name_en: item.country_name_en,
+  country_name_ar: item.country_name_ar,
   spice_level: item.spice_level,
   visible: item.visible,
   order: item.order,
@@ -929,7 +1024,9 @@ app.get('/api/stories', async (req, res) => {
     res.json({
       id: story._id.toString(),
       title: story.title_en,
+      title_ar: story.title_ar,
       description: story.description_en,
+      description_ar: story.description_ar,
       background_image: makeAbsoluteUrl(req, story.background_image),
     });
   } catch (error) {

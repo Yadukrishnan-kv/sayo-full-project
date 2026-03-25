@@ -19,6 +19,139 @@ type SubCategoryPayload = {
   category_id?: string;
 };
 
+type CountryPayload = {
+  _id?: string;
+  id?: string;
+  name_en?: string;
+  name_ar?: string;
+};
+
+const FILTER_ALIAS_MAP: Record<string, string[]> = {
+  chefsignature: ["chefsignature", "chefspecial", "chefspecialty", "chefspeciality", "chefspecials"],
+  chefspecial: ["recommended", "recommend", "chefselection", "chefsselection"],
+  popular: ["popular"],
+  new: ["new"],
+  vegan: ["vegan"],
+  vegetarian: ["vegetarian", "veg"],
+  containsegg: ["containsegg", "egg", "eggs"],
+  nonvegetarian: ["nonvegetarian", "nonveg", "nveg", "nv"],
+  hot: ["hot", "spicy"],
+  spicy: ["hot", "spicy"],
+  extrahot: ["extrahot", "veryhot", "superhot", "extraspicy"],
+  extraspicy: ["extrahot", "veryhot", "superhot", "extraspicy"],
+  japan: ["japan", "jp"],
+  china: ["china", "cn"],
+  thailand: ["thailand", "thai", "th"],
+  southkorea: ["southkorea", "korea", "kr"],
+  malaysia: ["malaysia", "my"],
+  indonesia: ["indonesia", "id"],
+  vietnam: ["vietnam", "vn"],
+  hawaii: ["hawaii", "us"],
+  singapore: ["singapore", "sg"],
+  india: ["india", "in"],
+  lebanon: ["lebanon", "lb"],
+};
+
+const ALLERGEN_ALIAS_MAP: Record<string, string[]> = {
+  dairy: ["dairy", "diary", "milk", "cheese", "butter"],
+  diary: ["dairy", "diary", "milk", "cheese", "butter"],
+  nuts: ["nuts", "nut", "peanut", "almond", "cashew", "walnut", "pistachio"],
+  gluten: ["gluten", "wheat"],
+  honey: ["honey"],
+};
+
+const COUNTRY_CODE_ALIAS_MAP: Record<string, string[]> = {
+  JP: ["japan", "jp"],
+  CN: ["china", "cn"],
+  TH: ["thailand", "thai", "th"],
+  KR: ["southkorea", "korea", "kr"],
+  MY: ["malaysia", "my"],
+  ID: ["indonesia", "id"],
+  VN: ["vietnam", "vn"],
+  US: ["hawaii", "us"],
+  SG: ["singapore", "sg"],
+  IN: ["india", "in"],
+  LB: ["lebanon", "lb"],
+};
+
+function normalizeFilterToken(value?: string | null): string {
+  return (value || "")
+    .toLowerCase()
+    .trim()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, "");
+}
+
+function getAliasesForFilter(filterValue: string): string[] {
+  const normalized = normalizeFilterToken(filterValue);
+  return FILTER_ALIAS_MAP[normalized] ?? [normalized];
+}
+
+function getAliasesForAllergen(allergenValue: string): string[] {
+  const normalized = normalizeFilterToken(allergenValue);
+  return ALLERGEN_ALIAS_MAP[normalized] ?? [normalized];
+}
+
+function getItemFilterTokens(item: MenuItemData, countryNamesById: Map<string, string>): string[] {
+  const tokens = new Set<string>();
+
+  const addToken = (value?: string | null) => {
+    const normalized = normalizeFilterToken(value);
+    if (!normalized) return;
+    tokens.add(normalized);
+  };
+
+  item.tags?.forEach(addToken);
+  item.allergens?.forEach(addToken);
+  addToken(item.country_code);
+  addToken(item.country_name_en);
+  addToken(item.country_name_ar);
+
+  const countryNameFromId = countryNamesById.get((item.country_id || "").trim());
+  addToken(countryNameFromId);
+
+  const countryAliases = COUNTRY_CODE_ALIAS_MAP[(item.country_code || "").toUpperCase()] ?? [];
+  countryAliases.forEach(addToken);
+
+  if ((item.spice_level ?? 0) >= 2) {
+    addToken("hot");
+    addToken("spicy");
+  }
+
+  if ((item.spice_level ?? 0) >= 3) {
+    addToken("extra hot");
+  }
+
+  return Array.from(tokens);
+}
+
+function itemMatchesSelectedFilter(
+  item: MenuItemData,
+  selectedFilter: string,
+  countryNamesById: Map<string, string>,
+): boolean {
+  const aliases = getAliasesForFilter(selectedFilter);
+  const tokens = getItemFilterTokens(item, countryNamesById);
+
+  return aliases.some((alias) => tokens.includes(alias));
+}
+
+function itemMatchesHiddenAllergen(item: MenuItemData, allergen: string): boolean {
+  const allergenAliases = getAliasesForAllergen(allergen);
+
+  const itemAllergenTokens = new Set<string>();
+  const addAllergenToken = (value?: string | null) => {
+    const token = normalizeFilterToken(value);
+    if (!token) return;
+    itemAllergenTokens.add(token);
+  };
+
+  item.allergens?.forEach(addAllergenToken);
+  item.tags?.forEach(addAllergenToken);
+
+  return allergenAliases.some((alias) => itemAllergenTokens.has(alias));
+}
+
 export const CategoryPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const { categories, menuItems, loading, error } = useMenuContext();
@@ -37,6 +170,8 @@ export const CategoryPage: React.FC = () => {
   const [activeItem, setActiveItem] = useState<MenuItemData | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [subCategoryNamesById, setSubCategoryNamesById] = useState<Map<string, string>>(new Map());
+  const [countryNamesById, setCountryNamesById] = useState<Map<string, string>>(new Map());
+  const [subCategoriesLoaded, setSubCategoriesLoaded] = useState(false);
 
   // Get items for this category
   const items = useMemo(() => {
@@ -61,20 +196,24 @@ export const CategoryPage: React.FC = () => {
           return false;
         }
       }
-      if (hiddenAllergens.length > 0 && item.allergens?.length) {
-        if (item.allergens.some((a) => hiddenAllergens.includes(a as any))) {
+      if (hiddenAllergens.length > 0) {
+        const matchesSelectedAllergen = hiddenAllergens.some((allergen) =>
+          itemMatchesHiddenAllergen(item, allergen),
+        );
+
+        if (!matchesSelectedAllergen) {
           return false;
         }
       }
       if (highlightFilters.length > 0) {
-        const matchesHighlight = item.tags?.some((t) => {
-          return highlightFilters.includes(t as any);
-        });
+        const matchesHighlight = highlightFilters.every((selectedFilter) =>
+          itemMatchesSelectedFilter(item, selectedFilter, countryNamesById),
+        );
         if (!matchesHighlight) return false;
       }
       return true;
     });
-  }, [items, query, hiddenAllergens, highlightFilters]);
+  }, [items, query, hiddenAllergens, highlightFilters, countryNamesById]);
 
   const sections = useMemo(() => {
     const bySection = new Map<string, { title: string; items: MenuItemData[] }>();
@@ -86,7 +225,9 @@ export const CategoryPage: React.FC = () => {
       const mappedSubCategoryName = subCategoryId
         ? subCategoryNamesById.get(subCategoryId)
         : undefined;
-      const sectionTitle = mappedSubCategoryName || rawSection || "Other Items";
+      const sectionTitle = subCategoryId
+        ? (mappedSubCategoryName || (subCategoriesLoaded ? "Other Items" : ""))
+        : (rawSection || "Other Items");
 
       if (!bySection.has(sectionKey)) {
         bySection.set(sectionKey, { title: sectionTitle, items: [] });
@@ -96,10 +237,11 @@ export const CategoryPage: React.FC = () => {
     });
 
     return Array.from(bySection.entries());
-  }, [itemsByClassification, subCategoryNamesById]);
+  }, [itemsByClassification, subCategoryNamesById, subCategoriesLoaded]);
 
   useEffect(() => {
     let isMounted = true;
+    if (isMounted) setSubCategoriesLoaded(false);
 
     const loadSubCategories = async () => {
       try {
@@ -125,9 +267,15 @@ export const CategoryPage: React.FC = () => {
           }
         });
 
-        if (isMounted) setSubCategoryNamesById(mapping);
+        if (isMounted) {
+          setSubCategoryNamesById(mapping);
+          setSubCategoriesLoaded(true);
+        }
       } catch {
-        if (isMounted) setSubCategoryNamesById(new Map());
+        if (isMounted) {
+          setSubCategoryNamesById(new Map());
+          setSubCategoriesLoaded(true);
+        }
       }
     };
 
@@ -136,6 +284,42 @@ export const CategoryPage: React.FC = () => {
       isMounted = false;
     };
   }, [category, isArabic]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadCountries = async () => {
+      try {
+        const baseUrl = (import.meta.env.VITE_API_URL as string | undefined)?.trim() || "http://localhost:5000";
+        const response = await fetch(`${baseUrl}/api/countries`);
+        if (!response.ok) return;
+
+        const payload = await response.json();
+        const list: CountryPayload[] = Array.isArray(payload)
+          ? payload
+          : Array.isArray(payload?.data)
+            ? payload.data
+            : [];
+
+        const mapping = new Map<string, string>();
+        list.forEach((entry) => {
+          const id = (entry._id || entry.id || "").trim();
+          const name = ((isArabic ? entry.name_ar : entry.name_en) || entry.name_en || entry.name_ar || "").trim();
+          if (!id || !name) return;
+          mapping.set(id, name);
+        });
+
+        if (isMounted) setCountryNamesById(mapping);
+      } catch {
+        if (isMounted) setCountryNamesById(new Map());
+      }
+    };
+
+    loadCountries();
+    return () => {
+      isMounted = false;
+    };
+  }, [isArabic]);
 
   useEffect(() => {
     const persistedQuery = window.sessionStorage.getItem("sayo-search-query") || "";
@@ -273,7 +457,9 @@ export const CategoryPage: React.FC = () => {
                   id={`section-${sectionKey.replace(/\s+/g, "-")}`}
                   className="category-page__section"
                 >
-                  <h2 className="category-page__section-title">{sectionData.title}</h2>
+                  {sectionData.title && (
+                    <h2 className="category-page__section-title">{sectionData.title}</h2>
+                  )}
                   <div
                     className={`category-page__section-grid ${viewMode === "list" ? "category-page__section-grid--list" : ""}`}
                   >
@@ -282,6 +468,7 @@ export const CategoryPage: React.FC = () => {
                         key={item._id}
                         item={item}
                         index={index}
+                        resolvedCountryName={countryNamesById.get((item.country_id || "").trim())}
                         onOpen={() => setActiveItem(item)}
                       />
                     ))}

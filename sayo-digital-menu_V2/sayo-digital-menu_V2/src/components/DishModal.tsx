@@ -22,6 +22,36 @@ const MODAL_BAR_BG = "#1e3a5f";
 const MODAL_TAB_ACTIVE_BG = "#1e3a5f";
 const FALLBACK_DISH_IMAGE = "https://images.pexels.com/photos/958546/pexels-photo-958546.jpeg?auto=compress&cs=tinysrgb&w=1200";
 
+function formatTagLabel(tag: string): string {
+  return tag
+    .replace(/[_-]+/g, " ")
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .trim()
+    .replace(/\s+/g, " ")
+    .replace(/\b\w/g, (match) => match.toUpperCase());
+}
+
+function normalizeTagToken(tag: string): string {
+  return tag
+    .toLowerCase()
+    .trim()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, "");
+}
+
+const DIETARY_TAG_KEY_MAP: Record<string, "vegan" | "vegetarian" | "containsEgg" | "nonVegetarian"> = {
+  vegan: "vegan",
+  vegetarian: "vegetarian",
+  veg: "vegetarian",
+  containsegg: "containsEgg",
+  egg: "containsEgg",
+  eggs: "containsEgg",
+  nonvegetarian: "nonVegetarian",
+  nonveg: "nonVegetarian",
+  nveg: "nonVegetarian",
+  nv: "nonVegetarian",
+};
+
 interface Props {
   item: MenuItemData | null;
   onClose: () => void;
@@ -37,7 +67,20 @@ export const DishModal: React.FC<Props> = ({ item, onClose, category }) => {
   const isArabic = i18n.language === "ar";
   const isChefSignature = item.tags?.includes("chef_special");
   const countryCode = getCountryCodeForItem(item);
+  const countryName =
+    (isArabic ? item.country_name_ar : item.country_name_en) ||
+    item.country_name_en ||
+    item.country_name_ar ||
+    (countryCode && COUNTRY_CODE_TO_I18N[countryCode] ? t(COUNTRY_CODE_TO_I18N[countryCode]) : countryCode);
   const isVegetarian = isVegetarianSection(item.section_id);
+  const dietaryTagKeys = Array.from(
+    new Set(
+      (item.tags ?? [])
+        .map((tag) => DIETARY_TAG_KEY_MAP[normalizeTagToken(tag)])
+        .filter(Boolean),
+    ),
+  );
+  const nonDietaryTags = (item.tags ?? []).filter((tag) => !DIETARY_TAG_KEY_MAP[normalizeTagToken(tag)]);
   const itemName = (isArabic ? item.name_ar : item.name_en) || item.name_en || item.name_ar;
   const itemDescription =
     (isArabic ? item.description_ar : item.description_en) || item.description_en || item.description_ar;
@@ -154,21 +197,35 @@ export const DishModal: React.FC<Props> = ({ item, onClose, category }) => {
                   <span className="dish-modal__detail-label">{t("detailCategory")}</span>
                   <span className="dish-modal__detail-value">{categoryName}</span>
                 </div>
-                {countryCode && (
+                {countryName && (
                   <div className="dish-modal__detail-row">
-                    <span className="dish-modal__detail-label">{t("detailCuisine")}</span>
+                    <span className="dish-modal__detail-label">{t("detailCountry")}</span>
                     <span className="dish-modal__detail-value">
-                      <span className="dish-modal__flag">{countryCodeToFlag(countryCode)}</span>
-                      {COUNTRY_CODE_TO_I18N[countryCode] ? t(COUNTRY_CODE_TO_I18N[countryCode]) : countryCode}
+                      {countryCode && <span className="dish-modal__flag">{countryCodeToFlag(countryCode)}</span>}
+                      {countryName}
                     </span>
                   </div>
                 )}
                 <div className="dish-modal__detail-row">
                   <span className="dish-modal__detail-label">{t("detailDietary")}</span>
-                  <span className="dish-modal__detail-value">
-                    {isVegetarian ? t("vegetarianDish") : t("nonVegetarian")}
+                  <span className="dish-modal__detail-value dish-modal__detail-value--wrap">
+                    {dietaryTagKeys.length > 0
+                      ? dietaryTagKeys.map((tagKey) => (
+                          <span key={tagKey} className="dish-modal__allergen-tag">{t(tagKey)}</span>
+                        ))
+                      : (isVegetarian ? t("vegetarianDish") : t("nonVegetarian"))}
                   </span>
                 </div>
+                {nonDietaryTags.length > 0 && (
+                  <div className="dish-modal__detail-row">
+                    <span className="dish-modal__detail-label">{t("detailHighlight")}</span>
+                    <span className="dish-modal__detail-value dish-modal__detail-value--wrap">
+                      {nonDietaryTags.map((tag) => (
+                        <span key={tag} className="dish-modal__allergen-tag">{formatTagLabel(tag)}</span>
+                      ))}
+                    </span>
+                  </div>
+                )}
                 <div className="dish-modal__detail-row">
                   <span className="dish-modal__detail-label">{t("detailSpiceLevel")}</span>
                   <span className="dish-modal__detail-value">

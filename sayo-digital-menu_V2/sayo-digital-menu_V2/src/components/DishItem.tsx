@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import type { MenuItemData } from "@/lib/customerAPI";
 import type { DietaryTag } from "../types/filters";
 import { useTranslation } from "react-i18next";
-import { getCountryCodeForItem, isVegetarianSection, countryCodeToFlag } from "@/lib/dataConverters";
+import { getCountryCodeForItem, isVegetarianSection } from "@/lib/dataConverters";
 import { AppIcon, getDietaryIconName } from "./AppIcon";
 import { IconWithTooltip } from "./IconWithTooltip";
 
@@ -31,9 +31,10 @@ interface Props {
   item: MenuItemData;
   onOpen: () => void;
   index: number;
+  resolvedCountryName?: string;
 }
 
-export const DishItem: React.FC<Props> = ({ item, onOpen, index }) => {
+export const DishItem: React.FC<Props> = ({ item, onOpen, index, resolvedCountryName }) => {
   const { t, i18n } = useTranslation();
   const isArabic = i18n.language === "ar";
   const itemName = (isArabic ? item.name_ar : item.name_en) || item.name_en || item.name_ar;
@@ -54,6 +55,12 @@ export const DishItem: React.FC<Props> = ({ item, onOpen, index }) => {
 
   const allergenList = (item.allergens ?? []) as DietaryTag[];
   const countryCode = getCountryCodeForItem(item);
+  const countryName =
+    resolvedCountryName ||
+    (isArabic ? item.country_name_ar : item.country_name_en) ||
+    item.country_name_en ||
+    item.country_name_ar ||
+    (countryCode && COUNTRY_CODE_TO_I18N[countryCode] ? t(COUNTRY_CODE_TO_I18N[countryCode]) : countryCode);
   const isVegetarian = isVegetarianSection(item.section_id);
   /** 0 = mild, 1 = medium, 2 = hot, 3 = extra hot; show on every card, default mild */
   const spiceLevel = item.spice_level ?? 0;
@@ -105,11 +112,20 @@ export const DishItem: React.FC<Props> = ({ item, onOpen, index }) => {
           )}
           <p className="dish-item__description">{itemDescription}</p>
           <div className="dish-item__meta">
-            {countryCode && (
-              <IconWithTooltip
-                label={t(`country_${countryCode.toLowerCase()}`) || countryCode}
-              >
-                <span className="dish-item__flag" aria-hidden>{countryCodeToFlag(countryCode)}</span>
+            {countryName && (
+              <IconWithTooltip label={countryName || countryCode || ""}>
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.28rem",
+                    fontSize: "0.74rem",
+                    color: "var(--color-text-secondary)",
+                  }}
+                >
+                  <AppIcon name="cuisine" size={13} strokeWidth={2} aria-hidden />
+                  <span>{countryName}</span>
+                </span>
               </IconWithTooltip>
             )}
             {isVegetarian && (

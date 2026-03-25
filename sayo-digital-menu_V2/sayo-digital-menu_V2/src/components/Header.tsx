@@ -111,6 +111,7 @@ export const Header: React.FC<HeaderProps> = ({ theme, onThemeChange, scrolled }
               <img
                 src={logoSrc}
                 alt={logoAlt}
+                className="header__logo"
                 style={{ height: 32, width: "auto", display: "block" }}
               />
             </Link>
