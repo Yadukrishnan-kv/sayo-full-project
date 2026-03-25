@@ -46,6 +46,7 @@ function extractObject<T>(payload: unknown): T {
 function toAbsoluteAssetUrl(url: string | undefined | null): string {
   if (!url) return ''
   if (ABSOLUTE_URL_REGEX.test(url) || url.startsWith('data:')) return url
+  if (url.startsWith('/assets/')) return url
 
   const base = API_BASE_URL.endsWith('/') ? API_BASE_URL.slice(0, -1) : API_BASE_URL
   const path = url.startsWith('/') ? url : `/${url}`
@@ -338,6 +339,8 @@ class AdminAPIClient {
     return {
       ...settings,
       logo_url: toAbsoluteAssetUrl(settings.logo_url),
+      logo_dark_url: toAbsoluteAssetUrl(settings.logo_dark_url),
+      logo_light_url: toAbsoluteAssetUrl(settings.logo_light_url),
       favicon_url: toAbsoluteAssetUrl(settings.favicon_url),
     }
   }
@@ -347,6 +350,8 @@ class AdminAPIClient {
     return {
       ...response.data,
       logo_url: toAbsoluteAssetUrl(response.data.logo_url),
+      logo_dark_url: toAbsoluteAssetUrl(response.data.logo_dark_url),
+      logo_light_url: toAbsoluteAssetUrl(response.data.logo_light_url),
       favicon_url: toAbsoluteAssetUrl(response.data.favicon_url),
     }
   }

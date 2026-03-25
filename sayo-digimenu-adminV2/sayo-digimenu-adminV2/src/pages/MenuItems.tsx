@@ -32,7 +32,7 @@ const schema = z.object({
   price: z.coerce.number().min(0),
   category_id: z.string().min(1, 'Category required'),
   subcategory_id: z.string().min(1, 'Sub-category is required'),
-  country_id: z.string().min(1, 'Country is required'),
+  country_id: z.string(),
   tags: z.string(),
   calories: z.union([z.coerce.number().min(0), z.literal('')]).transform((v) => (v === '' ? null : v)),
   allergens: z.string(),
@@ -167,7 +167,7 @@ export function MenuItemsPage() {
         const subs = subcategories.filter((cl) => cl.category_id === cid).sort((a, b) => a.order - b.order)
         return subs[0]?.id ?? ''
       })(),
-      country_id: countries[0]?.id ?? '',
+      country_id: '',
       tags: '',
       calories: null,
       allergens: '',
@@ -199,7 +199,7 @@ export function MenuItemsPage() {
       price: 0,
       category_id: firstCategoryId,
       subcategory_id: firstSubs[0]?.id ?? '',
-      country_id: countries[0]?.id ?? '',
+      country_id: '',
       tags: '',
       calories: '' as unknown as number | null,
       allergens: '',
@@ -231,7 +231,7 @@ export function MenuItemsPage() {
       price: item.price,
       category_id: item.category_id,
       subcategory_id: defaultSubId,
-      country_id: item.country_id ?? countries[0]?.id ?? '',
+      country_id: item.country_id ?? '',
       tags: item.tags.join(', '),
       calories: item.calories,
       allergens: item.allergens.join(', '),
@@ -265,11 +265,7 @@ export function MenuItemsPage() {
       return
     }
 
-    const countryId = data.country_id || (countries[0]?.id ?? null)
-    if (!countryId) {
-      toast('Please select a country', 'error')
-      return
-    }
+    const countryId = data.country_id || null
 
     try {
       const payload = {
@@ -564,7 +560,7 @@ export function MenuItemsPage() {
               )}
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium">Country (required)</label>
+              <label className="mb-1 block text-sm font-medium">Country (optional)</label>
               <select
                 {...register('country_id')}
                 className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-4 py-2 text-[var(--color-text-primary)]"
@@ -574,9 +570,6 @@ export function MenuItemsPage() {
                   <option key={c.id} value={c.id}>{c.name_en}</option>
                 ))}
               </select>
-              {errors.country_id && (
-                <p className="mt-1 text-sm text-red-600">{errors.country_id.message}</p>
-              )}
             </div>
           </div>
           <div>

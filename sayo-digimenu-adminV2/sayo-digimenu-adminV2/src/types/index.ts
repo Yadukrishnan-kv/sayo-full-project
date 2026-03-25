@@ -95,6 +95,8 @@ export interface Settings {
   address_en?: string
   address_ar?: string
   logo_url: string
+  logo_dark_url?: string
+  logo_light_url?: string
   favicon_url: string
   theme_mode: 'light' | 'dark' | 'system'
 }

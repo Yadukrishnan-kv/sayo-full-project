@@ -43,11 +43,18 @@ const MenuItemSchema = new mongoose.Schema(
     country_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Country',
+      default: null,
     },
 
     // Country name snapshot to keep filter-friendly values even if relation changes
-    country_name_en: String,
-    country_name_ar: String,
+    country_name_en: {
+      type: String,
+      default: null,
+    },
+    country_name_ar: {
+      type: String,
+      default: null,
+    },
 
     // Nutrition & Allergens
     calories: Number,

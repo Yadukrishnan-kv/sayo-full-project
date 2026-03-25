@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Theme } from "../hooks/useTheme";
 import { AppIcon } from "./AppIcon";
@@ -12,14 +13,16 @@ export const Footer: React.FC = () => {
   const { settings } = useMenuContext();
   const defaultLogo =
     theme === "light"
-      ? i18n.language === "ar"
-        ? "/assets/Logo_AR.svg"
-        : "/assets/Logo_EN.svg"
-      : i18n.language === "ar"
-        ? "/assets/Logo_lgt_AR.svg"
-        : "/assets/Logo_lgt_EN.svg";
+      ? "/assets/Logo_EN.svg"
+      : "/assets/Logo_lgt_EN.svg";
+  const themeLogo = theme === "light" ? settings?.logo_dark_url : settings?.logo_light_url;
+  const preferredLogo = themeLogo || settings?.logo_url || defaultLogo;
+  const [logoSrc, setLogoSrc] = useState(preferredLogo);
 
-  const logoSrc = settings?.logo_url || defaultLogo;
+  useEffect(() => {
+    setLogoSrc(preferredLogo);
+  }, [preferredLogo]);
+
   const restaurantName =
     (isArabic ? settings?.restaurant_name_ar : settings?.restaurant_name) ||
     settings?.restaurant_name ||
@@ -29,7 +32,7 @@ export const Footer: React.FC = () => {
   return (
     <footer className="footer">
       <div className="container footer__inner">
-        <img src={logoSrc} alt={restaurantName} className="footer__logo" />
+        <img src={logoSrc} alt={restaurantName} className="footer__logo" onError={() => setLogoSrc(defaultLogo)} />
         <div>{t("footerRights", { year, restaurant: restaurantName })}</div>
         <div className="footer__social">
           <a

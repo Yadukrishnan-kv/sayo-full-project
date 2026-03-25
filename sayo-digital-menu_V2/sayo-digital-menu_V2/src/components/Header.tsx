@@ -23,31 +23,35 @@ export const Header: React.FC<HeaderProps> = ({ theme, onThemeChange, scrolled }
   const [searchValue, setSearchValue] = useState("");
   const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
   const [dropdownTop, setDropdownTop] = useState(56);
-  const searchAnchorRef = useRef<HTMLElement | null>(null);
+  const mobileSearchAnchorRef = useRef<HTMLButtonElement | null>(null);
+  const desktopSearchAnchorRef = useRef<HTMLDivElement | null>(null);
   const headerRef = useRef<HTMLElement>(null);
   const isMobile = useMediaQuery("(max-width: 767px)");
+  const activeSearchAnchorRef = isMobile ? mobileSearchAnchorRef : desktopSearchAnchorRef;
 
   useEffect(() => {
     if (!filterDropdownOpen) return;
     if (isMobile && headerRef.current) {
       setDropdownTop(headerRef.current.getBoundingClientRect().bottom);
-    } else if (searchAnchorRef.current) {
-      setDropdownTop(searchAnchorRef.current.getBoundingClientRect().bottom + 4);
+    } else if (activeSearchAnchorRef.current) {
+      setDropdownTop(activeSearchAnchorRef.current.getBoundingClientRect().bottom + 4);
     }
-  }, [filterDropdownOpen, isMobile]);
+  }, [filterDropdownOpen, isMobile, activeSearchAnchorRef]);
 
   const { settings } = useMenuContext();
   const isArabic = i18n.language === "ar";
   const defaultLogo =
     theme === "light"
-      ? isArabic
-        ? "/assets/Logo_AR.svg"
-        : "/assets/Logo_EN.svg"
-      : isArabic
-        ? "/assets/Logo_lgt_AR.svg"
-        : "/assets/Logo_lgt_EN.svg";
+      ? "/assets/Logo_EN.svg"
+      : "/assets/Logo_lgt_EN.svg";
+  const themeLogo = theme === "light" ? settings?.logo_dark_url : settings?.logo_light_url;
+  const preferredLogo = themeLogo || settings?.logo_url || defaultLogo;
+  const [logoSrc, setLogoSrc] = useState(preferredLogo);
 
-  const logoSrc = settings?.logo_url || defaultLogo;
+  useEffect(() => {
+    setLogoSrc(preferredLogo);
+  }, [preferredLogo]);
+
   const logoAlt =
     (isArabic ? settings?.restaurant_name_ar : settings?.restaurant_name) ||
     settings?.restaurant_name ||
@@ -113,6 +117,7 @@ export const Header: React.FC<HeaderProps> = ({ theme, onThemeChange, scrolled }
                 alt={logoAlt}
                 className="header__logo"
                 style={{ height: 32, width: "auto", display: "block" }}
+                onError={() => setLogoSrc(defaultLogo)}
               />
             </Link>
           </div>
@@ -122,7 +127,7 @@ export const Header: React.FC<HeaderProps> = ({ theme, onThemeChange, scrolled }
               <>
                 {isMobile ? (
                   <motion.button
-                    ref={searchAnchorRef}
+                    ref={mobileSearchAnchorRef}
                     type="button"
                     whileTap={{ scale: 0.94 }}
                     onClick={() => setFilterDropdownOpen(true)}
@@ -133,7 +138,7 @@ export const Header: React.FC<HeaderProps> = ({ theme, onThemeChange, scrolled }
                   </motion.button>
                 ) : (
                   <div
-                    ref={searchAnchorRef}
+                    ref={desktopSearchAnchorRef}
                     className="header__search-wrap"
                     style={{
                       position: "relative",
@@ -152,7 +157,7 @@ export const Header: React.FC<HeaderProps> = ({ theme, onThemeChange, scrolled }
                 <SearchMegaDropdown
                   isOpen={filterDropdownOpen}
                   onClose={() => setFilterDropdownOpen(false)}
-                  anchorRef={searchAnchorRef}
+                  anchorRef={activeSearchAnchorRef}
                   top={dropdownTop}
                   searchValue={searchValue}
                   onSearchChange={handleSearchChange}

@@ -29,7 +29,6 @@ export function SettingsPage() {
   const {
     register,
     handleSubmit,
-    formState: { isDirty },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -44,7 +43,14 @@ export function SettingsPage() {
   const onSave = async (data: FormData) => {
     try {
       const id = settings.id
-      const updated = id ? await adminAPI.updateSettings(id, data) : await adminAPI.getSettings()
+      const payload = {
+        ...data,
+        logo_url: settings.logo_url,
+        logo_dark_url: settings.logo_dark_url || '',
+        logo_light_url: settings.logo_light_url || '',
+        favicon_url: settings.favicon_url,
+      }
+      const updated = id ? await adminAPI.updateSettings(id, payload) : await adminAPI.getSettings()
       setSettings(updated)
       toast('Settings saved', 'success')
     } catch (error) {
@@ -129,7 +135,7 @@ export function SettingsPage() {
               Logo
             </label>
             <p className="mb-2 text-xs text-[var(--color-text-secondary)]">
-              Default: assets (Logo_lgt_EN.svg / Logo_lgt_AR.svg for sidebar). Upload to override.
+              Legacy single logo (used if theme-specific logos are not set).
             </p>
             <ImageUpload
               value={settings.logo_url}
@@ -154,6 +160,32 @@ export function SettingsPage() {
                 Use default (AR)
               </Button>
             </div>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-[var(--color-text-secondary)]">
+              Logo for Light Mode (dark logo)
+            </label>
+            <p className="mb-2 text-xs text-[var(--color-text-secondary)]">
+              Shown when website theme is light.
+            </p>
+            <ImageUpload
+              value={settings.logo_dark_url || ''}
+              onChange={(url) => setSettings({ logo_dark_url: url })}
+              placeholder="Upload dark logo for light mode"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-[var(--color-text-secondary)]">
+              Logo for Dark Mode (light logo)
+            </label>
+            <p className="mb-2 text-xs text-[var(--color-text-secondary)]">
+              Shown when website theme is dark.
+            </p>
+            <ImageUpload
+              value={settings.logo_light_url || ''}
+              onChange={(url) => setSettings({ logo_light_url: url })}
+              placeholder="Upload light logo for dark mode"
+            />
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-[var(--color-text-secondary)]">
@@ -190,7 +222,7 @@ export function SettingsPage() {
               <option value="system">System</option>
             </select>
           </div>
-          <Button type="submit" disabled={!isDirty}>
+          <Button type="submit">
             Save settings
           </Button>
         </form>

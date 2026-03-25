@@ -7,6 +7,8 @@ const SettingsSchema = new mongoose.Schema(
     address_en: String,
     address_ar: String,
     logo_url: String,
+    logo_dark_url: String,
+    logo_light_url: String,
     favicon_url: String,
     theme_mode: {
       type: String,

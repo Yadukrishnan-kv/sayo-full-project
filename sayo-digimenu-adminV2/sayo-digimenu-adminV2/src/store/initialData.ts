@@ -22,6 +22,8 @@ const defaultSettings: Settings = {
   address_en: '',
   address_ar: '',
   logo_url: '',
+  logo_dark_url: '',
+  logo_light_url: '',
   favicon_url: '',
   theme_mode: 'light',
 }

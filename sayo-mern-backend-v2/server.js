@@ -739,11 +739,23 @@ app.get('/api/settings', async (req, res) => {
         restaurant_name_ar: 'سايو الجبيل',
         address_en: 'Al Fanater District, Jubail, Saudi Arabia',
         address_ar: 'حي الفناتير، الجبيل، المملكة العربية السعودية',
-        logo_url: '/assets/Logo_lgt_EN.svg',
+        logo_url: '',
+        logo_dark_url: '',
+        logo_light_url: '',
         favicon_url: '/assets/Favicon.svg',
         theme_mode: 'light',
       });
     }
+
+    const needsLogoBackfill =
+      settings.logo_dark_url === undefined || settings.logo_light_url === undefined;
+
+    if (needsLogoBackfill) {
+      settings.logo_dark_url = settings.logo_dark_url ?? '/assets/Logo_EN.svg';
+      settings.logo_light_url = settings.logo_light_url ?? '/assets/Logo_lgt_EN.svg';
+      await settings.save();
+    }
+
     res.json({
       id: settings._id.toString(),
       restaurant_name: settings.restaurant_name,
@@ -751,6 +763,8 @@ app.get('/api/settings', async (req, res) => {
       address_en: settings.address_en,
       address_ar: settings.address_ar,
       logo_url: makeAbsoluteUrl(req, settings.logo_url),
+      logo_dark_url: makeAbsoluteUrl(req, settings.logo_dark_url),
+      logo_light_url: makeAbsoluteUrl(req, settings.logo_light_url),
       favicon_url: makeAbsoluteUrl(req, settings.favicon_url),
       theme_mode: settings.theme_mode,
     });
@@ -764,6 +778,12 @@ app.put('/api/settings/:id', authMiddleware, async (req, res) => {
     const body = { ...req.body };
     if (body.logo_url) {
       body.logo_url = await saveBase64Image(body.logo_url, 'settings');
+    }
+    if (body.logo_dark_url) {
+      body.logo_dark_url = await saveBase64Image(body.logo_dark_url, 'settings');
+    }
+    if (body.logo_light_url) {
+      body.logo_light_url = await saveBase64Image(body.logo_light_url, 'settings');
     }
     if (body.favicon_url) {
       body.favicon_url = await saveBase64Image(body.favicon_url, 'settings');
