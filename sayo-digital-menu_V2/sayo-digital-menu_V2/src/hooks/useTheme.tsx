@@ -1,22 +1,19 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 export type Theme = "light" | "dark";
 
 const STORAGE_KEY = "sayo-theme";
 
 export function useTheme(): [Theme, (theme: Theme) => void] {
-  const [theme, setTheme] = useState<Theme>("light");
-
-  useEffect(() => {
+  const [theme, setTheme] = useState<Theme>(() => {
     const stored = window.localStorage.getItem(STORAGE_KEY) as Theme | null;
     if (stored === "light" || stored === "dark") {
       document.documentElement.dataset.theme = stored;
-      setTheme(stored);
-    } else {
-      document.documentElement.dataset.theme = "light";
-      setTheme("light");
+      return stored;
     }
-  }, []);
+    document.documentElement.dataset.theme = "light";
+    return "light";
+  });
 
   const updateTheme = (next: Theme) => {
     setTheme(next);

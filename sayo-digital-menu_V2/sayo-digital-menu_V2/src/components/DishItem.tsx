@@ -41,17 +41,14 @@ export const DishItem: React.FC<Props> = ({ item, onOpen, index, resolvedCountry
   const itemDescription =
     (isArabic ? item.description_ar : item.description_en) || item.description_en || item.description_ar;
 
-  const firstTag = item.tags?.[0];
   const tagLabels: Record<string, string> = {
     chef_special: t("chefSpecial"),
     chefSignature: t("chefSignature"),
     popular: t("popular"),
     new: t("new"),
   };
-  const tagLabel = firstTag
-    ? tagLabels[firstTag]
-    : undefined;
-  const isChefSignature = firstTag === "chefSignature";
+  const visibleTags = (item.tags ?? []).filter((tag) => tagLabels[tag]);
+  const isChefSignature = item.tags?.includes("chefSignature") ?? false;
 
   const allergenList = (item.allergens ?? []) as DietaryTag[];
   const countryCode = getCountryCodeForItem(item);
@@ -102,15 +99,20 @@ export const DishItem: React.FC<Props> = ({ item, onOpen, index, resolvedCountry
               </span>
             </div>
           </div>
-          {tagLabel && (
-            <span
-              className={`dish-item__pill ${isChefSignature ? "dish-item__pill--signature" : ""}`}
-            >
-              {isChefSignature && (
-                <AppIcon name="chefSignature" size={12} strokeWidth={2} className="dish-item__pill-icon" aria-hidden />
-              )}
-              {tagLabel}
-            </span>
+          {visibleTags.length > 0 && (
+            <div className="dish-item__pills">
+              {visibleTags.map((tag) => (
+                <span
+                  key={tag}
+                  className={`dish-item__pill ${tag === "chefSignature" ? "dish-item__pill--signature" : ""}`}
+                >
+                  {tag === "chefSignature" && (
+                    <AppIcon name="chefSignature" size={12} strokeWidth={2} className="dish-item__pill-icon" aria-hidden />
+                  )}
+                  {tagLabels[tag]}
+                </span>
+              ))}
+            </div>
           )}
           <p className="dish-item__description">{itemDescription}</p>
           <div className="dish-item__meta">

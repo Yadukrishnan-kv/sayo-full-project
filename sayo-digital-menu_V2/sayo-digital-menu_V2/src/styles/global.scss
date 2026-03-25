@@ -1199,11 +1199,17 @@ body {
   opacity: 0.8;
 }
 
+.dish-item__pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  align-self: flex-start;
+}
+
 .dish-item__pill {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  align-self: flex-start;
   border-radius: 999px;
   border: 1px solid rgba(201, 164, 108, 0.9);
   font-size: 0.65rem;
@@ -1607,6 +1613,9 @@ body {
   inset: 0;
   background: transparent;
   z-index: calc(var(--z-overlay) - 1);
+  outline: none;
+  border: none;
+  cursor: default;
 }
 
 /* Circular filter FAB (icon only) – solid background */
@@ -1625,6 +1634,12 @@ body {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  outline: none;
+
+  &:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.6);
+    outline-offset: 2px;
+  }
 }
 
 .category-page__floating-nav-fab-icon {

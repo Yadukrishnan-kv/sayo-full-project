@@ -158,7 +158,7 @@ export const DishModal: React.FC<Props> = ({ item, onClose, category }) => {
                   </div>
                 </div>
                 <div className="dish-modal__attributes">
-                  {item.calories != null && (
+                  {Number(item.calories) >= 1 && (
                     <span className="dish-modal__attr">
                       <AppIcon name="calories" size={16} strokeWidth={2} aria-hidden />
                       {item.calories} {t("calories")}
@@ -232,7 +232,7 @@ export const DishModal: React.FC<Props> = ({ item, onClose, category }) => {
                     {t(SPICE_LABELS[item.spiceLevel ?? (item.tags?.includes("extraHot") ? 3 : item.tags?.includes("hot") ? 2 : 0)] ?? "spiceLevelMild")}
                   </span>
                 </div>
-                {item.calories != null && (
+                {Number(item.calories) >= 1 && (
                   <div className="dish-modal__detail-row">
                     <span className="dish-modal__detail-label">{t("detailCalories")}</span>
                     <span className="dish-modal__detail-value">
