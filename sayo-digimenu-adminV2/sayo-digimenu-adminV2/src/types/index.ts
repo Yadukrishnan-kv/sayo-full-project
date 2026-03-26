@@ -127,6 +127,7 @@ export interface Country {
   id: string
   name_en: string
   name_ar: string
+  flag_image?: string
   order: number
   visible: boolean
 }

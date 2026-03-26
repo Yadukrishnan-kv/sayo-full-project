@@ -55,6 +55,10 @@ const MenuItemSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    country_flag_url: {
+      type: String,
+      default: null,
+    },
 
     // Nutrition & Allergens
     calories: Number,

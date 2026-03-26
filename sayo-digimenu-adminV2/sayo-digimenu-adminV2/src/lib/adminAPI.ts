@@ -66,6 +66,13 @@ function normalizeCategory(category: Category): Category {
   }
 }
 
+function normalizeCountry(country: Country): Country {
+  return {
+    ...country,
+    flag_image: toAbsoluteAssetUrl(country.flag_image),
+  }
+}
+
 function normalizeMenuItem(item: MenuItem): MenuItem {
   return {
     ...item,
@@ -231,17 +238,17 @@ class AdminAPIClient {
 
   async getCountries() {
     const response = await this.client.get<unknown>('/api/countries')
-    return extractArray<Country>(response.data)
+    return extractArray<Country>(response.data).map(normalizeCountry)
   }
 
   async createCountry(country: Omit<Country, 'id'>) {
     const response = await this.client.post<Country>('/api/countries', country)
-    return response.data
+    return normalizeCountry(response.data)
   }
 
   async updateCountry(id: string, country: Partial<Country>) {
     const response = await this.client.put<Country>(`/api/countries/${id}`, country)
-    return response.data
+    return normalizeCountry(response.data)
   }
 
   async deleteCountry(id: string) {

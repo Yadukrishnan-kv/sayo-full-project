@@ -14,6 +14,11 @@ const CountrySchema = new mongoose.Schema(
       trim: true,
       unique: true,
     },
+    flag_image: {
+      type: String,
+      default: '',
+      trim: true,
+    },
     visible: {
       type: Boolean,
       default: true,

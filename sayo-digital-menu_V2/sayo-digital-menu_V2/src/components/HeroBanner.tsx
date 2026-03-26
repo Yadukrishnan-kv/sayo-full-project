@@ -120,7 +120,7 @@ export const HeroBanner: React.FC = () => {
           aria-label="Previous slide"
           className="hero__arrow hero__arrow--prev"
         >
-          ←
+          ‹
         </button>
         <button
           type="button"
@@ -132,7 +132,7 @@ export const HeroBanner: React.FC = () => {
           className="hero__arrow hero__arrow--next"
           
         >
-          →
+          ›
         </button>
 
         <button

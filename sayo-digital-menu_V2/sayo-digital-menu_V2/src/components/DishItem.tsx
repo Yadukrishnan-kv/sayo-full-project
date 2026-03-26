@@ -71,9 +71,10 @@ interface Props {
   onOpen: () => void;
   index: number;
   resolvedCountryName?: string;
+  resolvedCountryFlagUrl?: string;
 }
 
-export const DishItem: React.FC<Props> = ({ item, onOpen, index, resolvedCountryName }) => {
+export const DishItem: React.FC<Props> = ({ item, onOpen, index, resolvedCountryName, resolvedCountryFlagUrl }) => {
   const { t, i18n } = useTranslation();
   const isArabic = i18n.language === "ar";
   const itemName = (isArabic ? item.name_ar : item.name_en) || item.name_en || item.name_ar;
@@ -188,19 +189,18 @@ export const DishItem: React.FC<Props> = ({ item, onOpen, index, resolvedCountry
           )}
           <p className="dish-item__description">{itemDescription}</p>
           <div className="dish-item__meta">
-            {countryName && (
+            {(countryName || countryCode || resolvedCountryFlagUrl || item.country_flag_url) && (
               <IconWithTooltip label={countryName || countryCode || ""}>
-                <span
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "0.28rem",
-                    fontSize: "0.74rem",
-                    color: "var(--color-text-secondary)",
-                  }}
-                >
-                  <AppIcon name="cuisine" size={13} strokeWidth={2} aria-hidden />
-                  <span>{countryName}</span>
+                <span className="dish-item__country-badge" aria-hidden>
+                  {resolvedCountryFlagUrl || item.country_flag_url ? (
+                    <img
+                      src={resolvedCountryFlagUrl || item.country_flag_url}
+                      alt=""
+                      className="dish-item__country-flag"
+                    />
+                  ) : (
+                    <span className="dish-item__country-code">{countryCode || "--"}</span>
+                  )}
                 </span>
               </IconWithTooltip>
             )}

@@ -331,13 +331,24 @@ body {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  background: rgba(0, 0, 0, 0.45);
+  background: rgba(0, 0, 0, 0.78);
   border-radius: 999px;
-  border: none;
-  width: 40px;
-  height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  width: 50px;
+  height: 50px;
   color: #ffffff;
-  font-size: 1.4rem;
+  font-size: 2rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 3;
+  transition: background-color 0.2s ease;
+}
+
+.hero__arrow:hover {
+  background: rgba(0, 0, 0, 0.9);
 }
 
 .hero__arrow--prev {
@@ -1139,6 +1150,27 @@ body {
   margin-top: 0.15rem;
 }
 
+.dish-item__country-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dish-item__country-flag {
+  width: 1.2rem;
+  height: 0.85rem;
+  border-radius: 2px;
+  object-fit: cover;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.dish-item__country-code {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  letter-spacing: 0.02em;
+}
+
 .dish-item__flag {
   font-size: 1rem;
   line-height: 1;
@@ -1171,13 +1203,13 @@ body {
 }
 
 .dish-item__diet-tag--nonveg {
-  background: rgba(71, 85, 105, 0.15);
-  color: var(--color-text-secondary);
+  background: rgba(220, 38, 38, 0.16);
+  color: #b91c1c;
 }
 
 .dish-item__diet-tag--egg {
-  background: rgba(180, 83, 9, 0.14);
-  color: #9a3412;
+  background: rgba(250, 204, 21, 0.26);
+  color: #a16207;
 }
 
 .dish-item__spice {

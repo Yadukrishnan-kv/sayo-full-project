@@ -18,6 +18,7 @@ type SubCategoryPayload = {
   name_en?: string;
   name_ar?: string;
   category_id?: string;
+  order?: number;
 };
 
 type CountryPayload = {
@@ -25,6 +26,7 @@ type CountryPayload = {
   id?: string;
   name_en?: string;
   name_ar?: string;
+  flag_image?: string;
 };
 
 const FILTER_ALIAS_MAP: Record<string, string[]> = {
@@ -173,19 +175,25 @@ export const CategoryPage: React.FC = () => {
   const [selectedSubCategoryId, setSelectedSubCategoryId] = useState<string | null>(null);
   const [floatingNavOpen, setFloatingNavOpen] = useState(false);
   const [subCategoryNamesById, setSubCategoryNamesById] = useState<Map<string, string>>(new Map());
+  const [subCategoryOrderById, setSubCategoryOrderById] = useState<Map<string, number>>(new Map());
   const [countryNamesById, setCountryNamesById] = useState<Map<string, string>>(new Map());
+  const [countryFlagsById, setCountryFlagsById] = useState<Map<string, string>>(new Map());
+  const [countryFlagsByName, setCountryFlagsByName] = useState<Map<string, string>>(new Map());
   const [subCategoriesLoaded, setSubCategoriesLoaded] = useState(false);
 
   const subCategoryOptions = useMemo<CustomDropdownOption[]>(() => {
-    const entries = Array.from(subCategoryNamesById.entries()).sort((a, b) =>
-      a[1].localeCompare(b[1], isArabic ? "ar" : "en", { sensitivity: "base" }),
-    );
+    const entries = Array.from(subCategoryNamesById.entries()).sort((a, b) => {
+      const orderA = subCategoryOrderById.get(a[0]) ?? 9999;
+      const orderB = subCategoryOrderById.get(b[0]) ?? 9999;
+      if (orderA !== orderB) return orderA - orderB;
+      return a[1].localeCompare(b[1], isArabic ? "ar" : "en", { sensitivity: "base" });
+    });
 
     return [
       { value: null, label: t("allClassifications") },
       ...entries.map(([id, label]) => ({ value: id, label })),
     ];
-  }, [subCategoryNamesById, t, isArabic]);
+  }, [subCategoryNamesById, subCategoryOrderById, t, isArabic]);
 
   // Get items for this category
   const items = useMemo(() => {
@@ -213,8 +221,13 @@ export const CategoryPage: React.FC = () => {
 
     return Array.from(countsBySubCategoryId.entries())
       .map(([id, data]) => ({ id, ...data }))
-      .sort((a, b) => a.label.localeCompare(b.label, isArabic ? "ar" : "en", { sensitivity: "base" }));
-  }, [items, subCategoryNamesById, subCategoriesLoaded, isArabic]);
+      .sort((a, b) => {
+        const orderA = subCategoryOrderById.get(a.id) ?? 9999;
+        const orderB = subCategoryOrderById.get(b.id) ?? 9999;
+        if (orderA !== orderB) return orderA - orderB;
+        return a.label.localeCompare(b.label, isArabic ? "ar" : "en", { sensitivity: "base" });
+      });
+  }, [items, subCategoryNamesById, subCategoryOrderById, subCategoriesLoaded, isArabic]);
 
   const handleSelectSubCategory = (subCategoryId: string | null) => {
     setSelectedSubCategoryId(subCategoryId);
@@ -321,8 +334,14 @@ export const CategoryPage: React.FC = () => {
       bySection.get(sectionKey)!.items.push(item);
     });
 
-    return Array.from(bySection.entries());
-  }, [itemsByClassification, subCategoryNamesById, subCategoriesLoaded]);
+    const entries = Array.from(bySection.entries());
+    entries.sort(([keyA], [keyB]) => {
+      const orderA = subCategoryOrderById.get(keyA) ?? 9999;
+      const orderB = subCategoryOrderById.get(keyB) ?? 9999;
+      return orderA - orderB;
+    });
+    return entries;
+  }, [itemsByClassification, subCategoryNamesById, subCategoryOrderById, subCategoriesLoaded]);
 
   useEffect(() => {
     let isMounted = true;
@@ -342,6 +361,7 @@ export const CategoryPage: React.FC = () => {
             : [];
 
         const mapping = new Map<string, string>();
+        const orderMapping = new Map<string, number>();
         list.forEach((entry) => {
           const id = (entry._id || entry.id || "").trim();
           const name = ((isArabic ? entry.name_ar : entry.name_en) || entry.name_en || entry.name_ar || "").trim();
@@ -349,16 +369,19 @@ export const CategoryPage: React.FC = () => {
 
           if (!category || !entry.category_id || String(entry.category_id) === String(category._id)) {
             mapping.set(id, name);
+            orderMapping.set(id, typeof entry.order === "number" ? entry.order : 9999);
           }
         });
 
         if (isMounted) {
           setSubCategoryNamesById(mapping);
+          setSubCategoryOrderById(orderMapping);
           setSubCategoriesLoaded(true);
         }
       } catch {
         if (isMounted) {
           setSubCategoryNamesById(new Map());
+          setSubCategoryOrderById(new Map());
           setSubCategoriesLoaded(true);
         }
       }
@@ -387,16 +410,36 @@ export const CategoryPage: React.FC = () => {
             : [];
 
         const mapping = new Map<string, string>();
+        const flagMapping = new Map<string, string>();
+        const flagByNameMapping = new Map<string, string>();
         list.forEach((entry) => {
           const id = (entry._id || entry.id || "").trim();
           const name = ((isArabic ? entry.name_ar : entry.name_en) || entry.name_en || entry.name_ar || "").trim();
           if (!id || !name) return;
           mapping.set(id, name);
+
+          const rawFlag = (entry.flag_image || "").trim();
+          if (rawFlag) {
+            const absoluteFlag = rawFlag.startsWith("http://") || rawFlag.startsWith("https://")
+              ? rawFlag
+              : `${baseUrl.replace(/\/$/, "")}${rawFlag.startsWith("/") ? rawFlag : `/${rawFlag}`}`;
+            flagMapping.set(id, absoluteFlag);
+            if ((entry.name_en || "").trim()) flagByNameMapping.set((entry.name_en || "").toLowerCase().trim(), absoluteFlag);
+            if ((entry.name_ar || "").trim()) flagByNameMapping.set((entry.name_ar || "").toLowerCase().trim(), absoluteFlag);
+          }
         });
 
-        if (isMounted) setCountryNamesById(mapping);
+        if (isMounted) {
+          setCountryNamesById(mapping);
+          setCountryFlagsById(flagMapping);
+          setCountryFlagsByName(flagByNameMapping);
+        }
       } catch {
-        if (isMounted) setCountryNamesById(new Map());
+        if (isMounted) {
+          setCountryNamesById(new Map());
+          setCountryFlagsById(new Map());
+          setCountryFlagsByName(new Map());
+        }
       }
     };
 
@@ -567,6 +610,11 @@ export const CategoryPage: React.FC = () => {
                         item={item}
                         index={index}
                         resolvedCountryName={countryNamesById.get((item.country_id || "").trim())}
+                        resolvedCountryFlagUrl={
+                          countryFlagsById.get((item.country_id || "").trim()) ||
+                          countryFlagsByName.get((item.country_name_en || "").toLowerCase().trim()) ||
+                          countryFlagsByName.get((item.country_name_ar || "").toLowerCase().trim())
+                        }
                         onOpen={() => setActiveItem(item)}
                       />
                     ))}

@@ -31,6 +31,7 @@ type Store = AppState & {
   addSubCategory: (subcategory: SubCategory) => void
   updateSubCategory: (id: string, data: Partial<SubCategory>) => void
   deleteSubCategory: (id: string) => void
+  reorderSubCategories: (categoryId: string, startIndex: number, endIndex: number) => void
 
   // Countries
   setCountries: (countries: Country[]) => void
@@ -161,6 +162,18 @@ setClassifications: (classifications: Classification[]) => set({ classifications
           subcategories: s.subcategories.filter((sc) => sc.id !== id),
           menuItems: s.menuItems.map((m) => (m.subcategory_id === id ? { ...m, subcategory_id: null } : m)),
         })),
+
+      reorderSubCategories: (categoryId, startIndex, endIndex) =>
+        set((s) => {
+          const inCat = s.subcategories
+            .filter((sc) => sc.category_id === categoryId)
+            .sort((a, b) => a.order - b.order)
+          const rest = s.subcategories.filter((sc) => sc.category_id !== categoryId)
+          const [moved] = inCat.splice(startIndex, 1)
+          inCat.splice(endIndex, 0, moved)
+          const reordered = inCat.map((sc, i) => ({ ...sc, order: i }))
+          return { subcategories: [...rest, ...reordered] }
+        }),
 
       // Countries
       setCountries: (countries) => set({ countries }),

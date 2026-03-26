@@ -64,6 +64,7 @@ const attachCountrySnapshot = async (body) => {
     body.country_id = null;
     body.country_name_en = null;
     body.country_name_ar = null;
+    body.country_flag_url = null;
     return;
   }
 
@@ -75,6 +76,7 @@ const attachCountrySnapshot = async (body) => {
   body.country_id = country._id;
   body.country_name_en = country.name_en;
   body.country_name_ar = country.name_ar;
+  body.country_flag_url = country.flag_image || null;
 };
 
 const normalizeTagToken = (value) => String(value || '')
@@ -152,6 +154,11 @@ const mapCategoryForAdmin = (req, category) => ({
   ...toPlain(category),
   description: category.description_en || category.description_ar || '',
   image: makeAbsoluteUrl(req, category.image),
+});
+
+const mapCountryForAdmin = (req, country) => ({
+  ...toPlain(country),
+  flag_image: makeAbsoluteUrl(req, country.flag_image),
 });
 
 const ensureDefaultAdmin = async () => {
@@ -420,7 +427,7 @@ app.delete('/api/subcategories/:id', authMiddleware, async (req, res) => {
 app.get('/api/countries', async (req, res) => {
   try {
     const countries = await Country.find().sort({ order: 1 });
-    res.json(countries.map(toPlain));
+    res.json(countries.map((country) => mapCountryForAdmin(req, country)));
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -428,9 +435,13 @@ app.get('/api/countries', async (req, res) => {
 
 app.post('/api/countries', authMiddleware, async (req, res) => {
   try {
-    const country = await Country.create(req.body);
+    const body = { ...req.body };
+    if (body.flag_image) {
+      body.flag_image = await saveBase64Image(body.flag_image, 'countries');
+    }
+    const country = await Country.create(body);
     await logActivity(req, req.user.email, 'countries', 'create', country._id, country);
-    res.status(201).json(toPlain(country));
+    res.status(201).json(mapCountryForAdmin(req, country));
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -438,9 +449,13 @@ app.post('/api/countries', authMiddleware, async (req, res) => {
 
 app.put('/api/countries/:id', authMiddleware, async (req, res) => {
   try {
-    const country = await Country.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    await logActivity(req, req.user.email, 'countries', 'update', country._id, req.body);
-    res.json(toPlain(country));
+    const body = { ...req.body };
+    if (body.flag_image) {
+      body.flag_image = await saveBase64Image(body.flag_image, 'countries');
+    }
+    const country = await Country.findByIdAndUpdate(req.params.id, body, { new: true });
+    await logActivity(req, req.user.email, 'countries', 'update', country._id, body);
+    res.json(mapCountryForAdmin(req, country));
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -510,6 +525,7 @@ app.get('/api/menu-items', async (req, res) => {
     res.json(items.map((item) => ({
       ...toPlain(item),
       image: makeAbsoluteUrl(req, item.image),
+      country_flag_url: makeAbsoluteUrl(req, item.country_flag_url),
     })));
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -526,6 +542,7 @@ app.get('/api/menu-items/:id', async (req, res) => {
     res.json({
       ...toPlain(item),
       image: makeAbsoluteUrl(req, item.image),
+      country_flag_url: makeAbsoluteUrl(req, item.country_flag_url),
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -548,6 +565,7 @@ app.post('/api/menu-items', authMiddleware, async (req, res) => {
     res.status(201).json({
       ...toPlain(item),
       image: makeAbsoluteUrl(req, item.image),
+      country_flag_url: makeAbsoluteUrl(req, item.country_flag_url),
     });
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -572,6 +590,7 @@ app.put('/api/menu-items/:id', authMiddleware, async (req, res) => {
     res.json({
       ...toPlain(item),
       image: makeAbsoluteUrl(req, item.image),
+      country_flag_url: makeAbsoluteUrl(req, item.country_flag_url),
     });
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -929,6 +948,7 @@ const mapMenuItemForPublic = (req, item) => ({
   country_code: item.country_code,
   country_name_en: item.country_name_en,
   country_name_ar: item.country_name_ar,
+  country_flag_url: makeAbsoluteUrl(req, item.country_flag_url),
   spice_level: item.spice_level,
   visible: item.visible,
   order: item.order,

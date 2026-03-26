@@ -115,9 +115,7 @@ export const DishModal: React.FC<Props> = ({ item, onClose, category }) => {
     (isArabic ? item.description_ar : item.description_en) || item.description_en || item.description_ar;
   const categoryName =
     (isArabic ? category?.name_ar : category?.name_en) || category?.name_en || category?.name_ar || item.section_id || item.category_id || "Menu";
-  const subtitleBase = item.section_id || categoryName;
-  const dietarySubtitle = dietaryTagKeys.map((tagKey) => t(tagKey)).join(", ");
-  const subtitleText = dietarySubtitle ? `${subtitleBase} - ${dietarySubtitle}` : subtitleBase;
+  const subtitleText = item.section_id || categoryName;
   const highlightItems = Array.from(
     new Map(
       [
