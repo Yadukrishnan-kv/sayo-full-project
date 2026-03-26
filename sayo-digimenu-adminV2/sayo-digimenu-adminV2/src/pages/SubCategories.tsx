@@ -21,7 +21,7 @@ import { Modal } from '@/components/ui/Modal'
 import { useStore } from '@/store/useStore'
 import { useToast } from '@/context/ToastContext'
 import { adminAPI } from '@/lib/adminAPI'
-import type { SubCategory, Category } from '@/types'
+import type { SubCategory } from '@/types'
 
 function SortableSubCategoryRow({
   sc,
