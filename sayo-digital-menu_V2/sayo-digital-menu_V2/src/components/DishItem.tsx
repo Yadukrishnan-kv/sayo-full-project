@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import type { MenuItemData } from "@/lib/customerAPI";
 import type { DietaryTag } from "../types/filters";
 import { useTranslation } from "react-i18next";
-import { getCountryCodeForItem, isVegetarianSection } from "@/lib/dataConverters";
+import { getCountryCodeForItem } from "@/lib/dataConverters";
 import { AppIcon, getDietaryIconName } from "./AppIcon";
 import { IconWithTooltip } from "./IconWithTooltip";
 
@@ -20,12 +20,51 @@ const COUNTRY_CODE_TO_I18N: Record<string, string> = {
   SA: "countrySA",
 };
 
-const SPICE_LABELS: Record<number, string> = {
-  0: "spiceLevelMild",
-  1: "spiceLevelMedium",
-  2: "spiceLevelHot",
-  3: "spiceLevelExtreme",
+type CardSpiceLevel = "mild" | "medium" | "hot";
+
+const SPICE_LABELS: Record<CardSpiceLevel, string> = {
+  mild: "spiceLevelMild",
+  medium: "spiceLevelMedium",
+  hot: "spiceLevelHot",
 };
+
+const SPICE_ICON_COUNT: Record<CardSpiceLevel, number> = {
+  mild: 1,
+  medium: 2,
+  hot: 3,
+};
+
+const CHEF_SIGNATURE_ALIASES = [
+  "chefsignature",
+  "chefspecial",
+  "chefspecialty",
+  "chefspeciality",
+  "chefspecials",
+  "chefsignaturedish",
+  "recommended",
+  "recommend",
+  "chefselection",
+  "chefsselection",
+];
+const VEGAN_ALIASES = ["vegan"];
+const VEGETARIAN_ALIASES = ["vegetarian", "veg"];
+const NON_VEGETARIAN_ALIASES = ["nonvegetarian", "nonveg", "nveg", "nv"];
+const CONTAINS_EGG_ALIASES = ["containsegg", "egg", "eggs"];
+const HOT_ALIASES = ["hot", "spicy"];
+const EXTRA_HOT_ALIASES = ["extrahot", "veryhot", "superhot", "extraspicy"];
+const POPULAR_ALIASES = ["popular"];
+
+function normalizeToken(value?: string | null): string {
+  return (value || "")
+    .toLowerCase()
+    .trim()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, "");
+}
+
+function hasAnyAlias(tokens: Set<string>, aliases: string[]): boolean {
+  return aliases.some((alias) => tokens.has(alias));
+}
 
 interface Props {
   item: MenuItemData;
@@ -41,14 +80,29 @@ export const DishItem: React.FC<Props> = ({ item, onOpen, index, resolvedCountry
   const itemDescription =
     (isArabic ? item.description_ar : item.description_en) || item.description_en || item.description_ar;
 
-  const tagLabels: Record<string, string> = {
-    chef_special: t("chefSpecial"),
+  const normalizedTokens = new Set<string>();
+  (item.tags ?? []).forEach((tag) => {
+    const token = normalizeToken(tag);
+    if (token) normalizedTokens.add(token);
+  });
+  (item.dietary_tags ?? []).forEach((tag) => {
+    const token = normalizeToken(tag);
+    if (token) normalizedTokens.add(token);
+  });
+  const normalizedSection = normalizeToken(item.section_id);
+  if (normalizedSection) normalizedTokens.add(normalizedSection);
+
+  const isChefSignature =
+    (item.tags?.includes("chefSignature") ?? false) ||
+    hasAnyAlias(normalizedTokens, CHEF_SIGNATURE_ALIASES);
+  const hasPopular = hasAnyAlias(normalizedTokens, POPULAR_ALIASES);
+  const visibleTagKeys: Array<"chefSignature"> = [];
+  const showChefSignatureBadge = isChefSignature || hasPopular;
+  if (showChefSignatureBadge) visibleTagKeys.push("chefSignature");
+
+  const tagLabels: Record<"chefSignature", string> = {
     chefSignature: t("chefSignature"),
-    popular: t("popular"),
-    new: t("new"),
   };
-  const visibleTags = (item.tags ?? []).filter((tag) => tagLabels[tag]);
-  const isChefSignature = item.tags?.includes("chefSignature") ?? false;
 
   const allergenList = (item.allergens ?? []) as DietaryTag[];
   const countryCode = getCountryCodeForItem(item);
@@ -58,9 +112,27 @@ export const DishItem: React.FC<Props> = ({ item, onOpen, index, resolvedCountry
     item.country_name_en ||
     item.country_name_ar ||
     (countryCode && COUNTRY_CODE_TO_I18N[countryCode] ? t(COUNTRY_CODE_TO_I18N[countryCode]) : countryCode);
-  const isVegetarian = isVegetarianSection(item.section_id);
-  /** 0 = mild, 1 = medium, 2 = hot, 3 = extra hot; show on every card, default mild */
-  const spiceLevel = item.spice_level ?? 0;
+  const isNonVegetarian =
+    hasAnyAlias(normalizedTokens, NON_VEGETARIAN_ALIASES) ||
+    normalizedSection.includes("nonvegetarian");
+  const isVegan = hasAnyAlias(normalizedTokens, VEGAN_ALIASES);
+  const isVegetarian =
+    !isNonVegetarian &&
+    (hasAnyAlias(normalizedTokens, VEGETARIAN_ALIASES) ||
+      (normalizedSection.includes("vegetarian") && !normalizedSection.includes("nonvegetarian")));
+  const hasContainsEgg = hasAnyAlias(normalizedTokens, CONTAINS_EGG_ALIASES);
+  const hasExtraHotTag = hasAnyAlias(normalizedTokens, EXTRA_HOT_ALIASES);
+  const hasHotTag = hasAnyAlias(normalizedTokens, HOT_ALIASES);
+  const numericSpiceLevel = item.spice_level ?? 0;
+  const spiceLevel: CardSpiceLevel = hasExtraHotTag
+    ? "hot"
+    : hasHotTag
+      ? "medium"
+      : numericSpiceLevel >= 2
+        ? "hot"
+        : numericSpiceLevel >= 1
+          ? "medium"
+          : "mild";
   const calorieValue = Number(item.calories);
   const showCalories = Number.isFinite(calorieValue) && calorieValue >= 1;
 
@@ -99,9 +171,9 @@ export const DishItem: React.FC<Props> = ({ item, onOpen, index, resolvedCountry
               </span>
             </div>
           </div>
-          {visibleTags.length > 0 && (
+          {visibleTagKeys.length > 0 && (
             <div className="dish-item__pills">
-              {visibleTags.map((tag) => (
+              {visibleTagKeys.map((tag) => (
                 <span
                   key={tag}
                   className={`dish-item__pill ${tag === "chefSignature" ? "dish-item__pill--signature" : ""}`}
@@ -132,20 +204,43 @@ export const DishItem: React.FC<Props> = ({ item, onOpen, index, resolvedCountry
                 </span>
               </IconWithTooltip>
             )}
-            {isVegetarian && (
-              <IconWithTooltip label={t("vegetarianDish")}>
-                <AppIcon name="vegetarian" size={16} strokeWidth={2} className="dish-item__veg-icon" aria-hidden />
+            {isVegan && (
+              <IconWithTooltip label={t("vegan")}>
+                <span className="dish-item__diet-tag dish-item__diet-tag--vegan">
+                  <AppIcon name="vegan" size={14} strokeWidth={2} aria-hidden />
+                </span>
               </IconWithTooltip>
             )}
-            <IconWithTooltip label={t(SPICE_LABELS[spiceLevel] ?? "spiceLevelMild")}>
+            {isVegetarian && (
+              <IconWithTooltip label={t("vegetarian") || t("vegetarianDish")}>
+                <span className="dish-item__diet-tag dish-item__diet-tag--veg">
+                  <AppIcon name="vegetarian" size={14} strokeWidth={2} className="dish-item__veg-icon" aria-hidden />
+                </span>
+              </IconWithTooltip>
+            )}
+            {isNonVegetarian && (
+              <IconWithTooltip label={t("nonVegetarian")}>
+                <span className="dish-item__diet-tag dish-item__diet-tag--nonveg">
+                  <AppIcon name="nonVegetarian" size={14} strokeWidth={2} aria-hidden />
+                </span>
+              </IconWithTooltip>
+            )}
+            {hasContainsEgg && (
+              <IconWithTooltip label={t("containsEgg")}>
+                <span className="dish-item__diet-tag dish-item__diet-tag--egg">
+                  <AppIcon name="containsEgg" size={14} strokeWidth={2} aria-hidden />
+                </span>
+              </IconWithTooltip>
+            )}
+            <IconWithTooltip label={t(SPICE_LABELS[spiceLevel])}>
               <span
-                className={`dish-item__spice dish-item__spice--${["mild", "medium", "hot", "extreme"][spiceLevel] ?? "mild"}`}
+                className={`dish-item__spice dish-item__spice--${spiceLevel}`}
                 aria-hidden
               >
-                {[1, 2, 3, 4].slice(0, Math.max(1, spiceLevel + 1)).map((i) => (
-                  <AppIcon key={i} name="hot" size={12} strokeWidth={2} aria-hidden />
+                {Array.from({ length: SPICE_ICON_COUNT[spiceLevel] }).map((_, index) => (
+                  <AppIcon key={`spice-${index}`} name="hot" size={12} strokeWidth={2} aria-hidden />
                 ))}
-                <span className="dish-item__spice-label">{t(SPICE_LABELS[spiceLevel] ?? "spiceLevelMild")}</span>
+                <span className="dish-item__spice-label">{t(SPICE_LABELS[spiceLevel])}</span>
               </span>
             </IconWithTooltip>
             {showCalories && (
