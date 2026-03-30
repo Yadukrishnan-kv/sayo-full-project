@@ -2,6 +2,7 @@ import axios, { AxiosInstance, AxiosError } from 'axios'
 import type { MenuSection, Category, Classification, SubCategory, Country, MenuItem, Banner, StorySection, FilterTag, Settings, MediaItem } from '@/types'
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL as string | undefined)?.trim() || 'http://localhost:5000'
+const APP_BASE_PATH = ((import.meta.env.BASE_URL as string | undefined) || '/').replace(/\/$/, '')
 
 type RefValue = string | { id?: string; _id?: string } | null | undefined
 
@@ -87,6 +88,7 @@ function normalizeMenuItem(item: MenuItem): MenuItem {
 class AdminAPIClient {
   private client: AxiosInstance
   private token: string | null = null
+  private hasRedirectedForUnauthorized = false
 
   constructor(baseURL = API_BASE_URL) {
     this.loadToken()
@@ -113,10 +115,25 @@ class AdminAPIClient {
       (error: AxiosError) => {
         if (error.response?.status === 401) {
           this.clearToken()
+          const requestUrl = error.config?.url || ''
+          if (!requestUrl.includes('/api/auth/login')) {
+            this.redirectToLogin()
+          }
         }
         throw error
       }
     )
+  }
+
+  private redirectToLogin() {
+    if (typeof window === 'undefined' || this.hasRedirectedForUnauthorized) return
+
+    const loginPath = `${APP_BASE_PATH}/login` || '/login'
+    const currentPath = window.location.pathname
+    if (currentPath === loginPath) return
+
+    this.hasRedirectedForUnauthorized = true
+    window.location.assign(loginPath)
   }
 
   private loadToken() {
