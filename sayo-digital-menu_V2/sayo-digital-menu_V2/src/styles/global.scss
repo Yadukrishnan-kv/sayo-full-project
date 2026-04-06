@@ -2012,6 +2012,12 @@ body {
   }
 }
 
+@media (max-width: 767px) {
+  .info-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
 /* Footer */
 .footer {
   flex-shrink: 0;

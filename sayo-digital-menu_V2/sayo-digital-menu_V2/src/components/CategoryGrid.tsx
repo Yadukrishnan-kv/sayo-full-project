@@ -109,6 +109,7 @@ export const CategoryGrid: React.FC = () => {
               {(isArabic ? settings?.restaurant_name_ar : settings?.restaurant_name) || settings?.restaurant_name || settings?.restaurant_name_ar || "SAYO Jubail"}
             </h2>
             <div
+              className="info-grid"
               style={{
                 marginTop: "0.8rem",
                 display: "grid",
@@ -125,7 +126,22 @@ export const CategoryGrid: React.FC = () => {
                 }}
               >
                 <div style={{ fontWeight: 600 }}>{t("openingHours")}</div>
-                <div>{t("openingHoursValue")}</div>
+                <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", columnGap: "0.6rem", rowGap: "0.1rem" }}>
+                  {[
+                    ["Monday",    "7–11 am, 11:30 am–11:30 pm"],
+                    ["Tuesday",   "7–11 am, 11:30 am–11:30 pm"],
+                    ["Wednesday", "7–11 am, 11:30 am–11:30 pm"],
+                    ["Thursday",  "7–11 am, 11:30 am–12 am"],
+                    ["Friday",    "7–11 am, 11:30 am–12 am"],
+                    ["Saturday",  "7–11 am, 11:30 am–11:30 pm"],
+                    ["Sunday",    "7–11 am, 11:30 am–11:30 pm"],
+                  ].map(([day, hours]) => (
+                    <>
+                      <span key={day + "-day"} style={{ fontWeight: 500 }}>{day}</span>
+                      <span key={day + "-hours"}>{hours}</span>
+                    </>
+                  ))}
+                </div>
                 <div style={{ fontWeight: 600, marginTop: "0.6rem" }}>{t("website")}</div>
                 <a href="https://www.sayosaudi.com" target="_blank" rel="noreferrer">
                   www.sayosaudi.com
