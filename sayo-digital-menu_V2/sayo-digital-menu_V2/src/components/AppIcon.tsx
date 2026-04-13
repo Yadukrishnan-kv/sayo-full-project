@@ -16,7 +16,6 @@ import {
   Sparks,
   FireFlame,
   Leaf,
-  Cutlery,
   Hat,
   GlassHalf,
   Cookie,
@@ -34,6 +33,7 @@ import {
 } from "iconoir-react";
 import type { DietaryTag, HighlightTag } from "../types/filters";
 import { SaudiRiyalIcon } from "./SaudiRiyalIcon";
+import { GiChickenOven } from "react-icons/gi";
 
 /** Default size and stroke for uniform icons across the app */
 const DEFAULT_SIZE = 20;
@@ -110,7 +110,7 @@ const ICON_MAP: Record<IconName, React.ComponentType<React.SVGProps<SVGSVGElemen
   vegan: Vegan,
   vegetarian: Leaf,
   containsEgg: Egg,
-  nonVegetarian: Cutlery,
+  nonVegetarian: GiChickenOven as unknown as React.ComponentType<React.SVGProps<SVGSVGElement>>,
   hot: FireFlame,
   extraHot: FireFlame,
   cuisine: Globe,

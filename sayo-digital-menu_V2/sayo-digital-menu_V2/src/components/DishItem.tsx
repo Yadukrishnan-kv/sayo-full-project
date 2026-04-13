@@ -232,17 +232,44 @@ export const DishItem: React.FC<Props> = ({ item, onOpen, index, resolvedCountry
                 </span>
               </IconWithTooltip>
             )}
-            <IconWithTooltip label={t(SPICE_LABELS[spiceLevel])}>
-              <span
-                className={`dish-item__spice dish-item__spice--${spiceLevel}`}
-                aria-hidden
-              >
-                {Array.from({ length: SPICE_ICON_COUNT[spiceLevel] }).map((_, index) => (
-                  <AppIcon key={`spice-${index}`} name="hot" size={12} strokeWidth={2} aria-hidden />
-                ))}
-                <span className="dish-item__spice-label">{t(SPICE_LABELS[spiceLevel])}</span>
-              </span>
-            </IconWithTooltip>
+            {/* Spice Level (only if tag present) */}
+            {(() => {
+              if (hasExtraHotTag) {
+                return (
+                  <IconWithTooltip label={t("spiceLevelExtraHot") || "Extra Hot"}>
+                    <span className="dish-item__spice dish-item__spice--hot" aria-hidden>
+                      {[...Array(3)].map((_, idx) => (
+                        <AppIcon key={`spice-hot-${idx}`} name="hot" size={12} strokeWidth={2} aria-hidden />
+                      ))}
+                      <span className="dish-item__spice-label">{t("spiceLevelExtraHot") || "Extra Hot"}</span>
+                    </span>
+                  </IconWithTooltip>
+                );
+              }
+              if (hasHotTag) {
+                return (
+                  <IconWithTooltip label={t("spiceLevelHot") || "Hot"}>
+                    <span className="dish-item__spice dish-item__spice--medium" aria-hidden>
+                      {[...Array(2)].map((_, idx) => (
+                        <AppIcon key={`spice-medium-${idx}`} name="hot" size={12} strokeWidth={2} aria-hidden />
+                      ))}
+                      <span className="dish-item__spice-label">{t("spiceLevelHot") || "Hot"}</span>
+                    </span>
+                  </IconWithTooltip>
+                );
+              }
+              if (normalizedTokens.has("mild")) {
+                return (
+                  <IconWithTooltip label={t("spiceLevelMild") || "Mild"}>
+                    <span className="dish-item__spice dish-item__spice--mild" aria-hidden>
+                      <AppIcon name="hot" size={12} strokeWidth={2} aria-hidden />
+                      <span className="dish-item__spice-label">{t("spiceLevelMild") || "Mild"}</span>
+                    </span>
+                  </IconWithTooltip>
+                );
+              }
+              return null;
+            })()}
             {showCalories && (
               <IconWithTooltip label={`${calorieValue} ${t("calories")}`}>
                 <span className="dish-item__calories-wrap">

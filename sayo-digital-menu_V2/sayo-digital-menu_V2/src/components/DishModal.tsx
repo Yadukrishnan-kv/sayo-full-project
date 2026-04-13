@@ -225,6 +225,15 @@ export const DishModal: React.FC<Props> = ({ item, onClose, category }) => {
                         size={16}
                         strokeWidth={2}
                         aria-hidden
+                        className={
+                          tagKey === "nonVegetarian"
+                            ? "icon-nonveg-modal"
+                            : tagKey === "vegetarian"
+                            ? "icon-veg-modal"
+                            : tagKey === "containsEgg"
+                            ? "icon-egg-modal"
+                            : undefined
+                        }
                       />
                       {t(tagKey)}
                     </span>
