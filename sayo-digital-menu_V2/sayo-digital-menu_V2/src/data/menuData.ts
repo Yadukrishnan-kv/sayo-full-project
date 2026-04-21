@@ -35,7 +35,7 @@ export interface MenuItem {
   categoryId: string;
   section?: string;
   tags?: HighlightTag[];
-  calories?: number;
+  calories?: string | number;
   allergens?: DietaryTag[];
   /** ISO 3166-1 alpha-2 country code for flag (e.g. "JP", "TH", "IN") */
   countryCode?: string;

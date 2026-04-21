@@ -61,7 +61,10 @@ const MenuItemSchema = new mongoose.Schema(
     },
 
     // Nutrition & Allergens
-    calories: Number,
+    calories: {
+      type: mongoose.Schema.Types.Mixed, // allow string or number
+      default: null,
+    },
     allergens: [String], // dairy, nuts, gluten, honey, etc.
 
     // Tags & Categorization

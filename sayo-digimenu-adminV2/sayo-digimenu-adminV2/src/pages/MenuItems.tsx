@@ -34,7 +34,7 @@ const schema = z.object({
   subcategory_id: z.string().min(1, 'Sub-category is required'),
   country_id: z.string(),
   tags: z.string(),
-  calories: z.union([z.coerce.number().min(0), z.literal('')]).transform((v) => (v === '' ? null : v)),
+  calories: z.union([z.string().min(0), z.number()]).transform((v) => (v === '' ? null : v)),
   allergens: z.string(),
   visible: z.boolean(),
   chef_special: z.boolean(),
@@ -583,7 +583,7 @@ export function MenuItemsPage() {
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium">Calories</label>
-              <input type="number" {...register('calories')} className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-4 py-2 text-[var(--color-text-primary)]" />
+              <input type="text" {...register('calories')} className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-4 py-2 text-[var(--color-text-primary)]" placeholder="e.g. 100 or 100-200" />
             </div>
           </div>
           <div>

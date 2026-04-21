@@ -44,7 +44,7 @@ export interface MenuItem {
   country_id: string | null
   image: string
   tags: string[]
-  calories: number | null
+  calories: string | number | null
   allergens: string[]
   visible: boolean
   order: number

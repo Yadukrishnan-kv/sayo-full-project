@@ -127,7 +127,7 @@ export const DishModal: React.FC<Props> = ({ item, onClose, category }) => {
           if (CHEF_SIGNATURE_ALIASES.includes(normalized)) {
             return ["chefSignature", { label: t("chefSignature"), icon: "chefSignature" as const }];
           }
-          return [normalized, { label: formatTagLabel(tag), icon: null as const }];
+          return [normalized, { label: formatTagLabel(tag), icon: null }];
         }),
       ] as Array<[string, { label: string; icon: "chefSignature" | null }]>,
     ).values(),
@@ -204,7 +204,7 @@ export const DishModal: React.FC<Props> = ({ item, onClose, category }) => {
                   </div>
                 </div>
                 <div className="dish-modal__attributes">
-                  {Number(item.calories) >= 1 && (
+                  {item.calories && String(item.calories).trim() !== "" && (
                     <span className="dish-modal__attr">
                       <AppIcon name="calories" size={16} strokeWidth={2} aria-hidden />
                       {item.calories} {t("calories")}
@@ -261,12 +261,7 @@ export const DishModal: React.FC<Props> = ({ item, onClose, category }) => {
             )}
             {activeTab === "information" && (
               <div className="dish-modal__info">
-                {item.section && (
-                  <div className="dish-modal__detail-row">
-                    <span className="dish-modal__detail-label">{t("detailSection")}</span>
-                    <span className="dish-modal__detail-value">{item.section}</span>
-                  </div>
-                )}
+                {/* Section display removed: property not present on MenuItemData */}
                 <div className="dish-modal__detail-row">
                   <span className="dish-modal__detail-label">{t("detailCategory")}</span>
                   <span className="dish-modal__detail-value">{categoryName}</span>
@@ -311,7 +306,7 @@ export const DishModal: React.FC<Props> = ({ item, onClose, category }) => {
                     {t(SPICE_LABELS[item.spice_level ?? (item.tags?.includes("extraHot") ? 3 : item.tags?.includes("hot") ? 2 : 0)] ?? "spiceLevelMild")}
                   </span>
                 </div>
-                {Number(item.calories) >= 1 && (
+                {item.calories && String(item.calories).trim() !== "" && (
                   <div className="dish-modal__detail-row">
                     <span className="dish-modal__detail-label">{t("detailCalories")}</span>
                     <span className="dish-modal__detail-value">

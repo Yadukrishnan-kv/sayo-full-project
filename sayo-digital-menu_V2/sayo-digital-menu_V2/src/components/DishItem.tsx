@@ -134,8 +134,10 @@ export const DishItem: React.FC<Props> = ({ item, onOpen, index, resolvedCountry
         : numericSpiceLevel >= 1
           ? "medium"
           : "mild";
-  const calorieValue = Number(item.calories);
-  const showCalories = Number.isFinite(calorieValue) && calorieValue >= 1;
+  const showCalories =
+    typeof item.calories === "string"
+      ? !!item.calories && String(item.calories).trim() !== ""
+      : typeof item.calories === "number" && item.calories >= 1;
 
   return (
     <motion.button
@@ -189,12 +191,12 @@ export const DishItem: React.FC<Props> = ({ item, onOpen, index, resolvedCountry
           )}
           <p className="dish-item__description">{itemDescription}</p>
           <div className="dish-item__meta">
-            {(countryName || countryCode || resolvedCountryFlagUrl || item.country_flag_url) && (
+            {(countryName || countryCode || resolvedCountryFlagUrl) && (
               <IconWithTooltip label={countryName || countryCode || ""}>
                 <span className="dish-item__country-badge" aria-hidden>
-                  {resolvedCountryFlagUrl || item.country_flag_url ? (
+                  {resolvedCountryFlagUrl ? (
                     <img
-                      src={resolvedCountryFlagUrl || item.country_flag_url}
+                      src={resolvedCountryFlagUrl}
                       alt=""
                       className="dish-item__country-flag"
                     />
@@ -271,10 +273,10 @@ export const DishItem: React.FC<Props> = ({ item, onOpen, index, resolvedCountry
               return null;
             })()}
             {showCalories && (
-              <IconWithTooltip label={`${calorieValue} ${t("calories")}`}>
+              <IconWithTooltip label={`${item.calories} ${t("calories")}`}>
                 <span className="dish-item__calories-wrap">
                   <AppIcon name="calories" size={14} strokeWidth={2} className="dish-item__calories-icon" aria-hidden />
-                  <span className="dish-item__calories">{calorieValue} {t("calories")}</span>
+                  <span className="dish-item__calories">{item.calories} {t("calories")}</span>
                 </span>
               </IconWithTooltip>
             )}
