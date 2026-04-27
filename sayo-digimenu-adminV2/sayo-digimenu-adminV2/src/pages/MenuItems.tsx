@@ -14,6 +14,7 @@ import {
 import { SortableContext, sortableKeyboardCoordinates, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical, Pencil, Trash2, Plus, Copy, Eye, EyeOff } from 'lucide-react'
+
 import { Header } from '@/components/layout/Header'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -23,6 +24,7 @@ import { useStore } from '@/store/useStore'
 import { useToast } from '@/context/ToastContext'
 import { adminAPI } from '@/lib/adminAPI'
 import type { MenuItem as MenuItemType } from '@/types'
+import * as XLSX from 'xlsx'
 
 const schema = z.object({
   name_en: z.string().min(1, 'Name (EN) required'),
@@ -403,16 +405,59 @@ export function MenuItemsPage() {
     return a.order - b.order
   })
 
+
+  // Export handler
+  const handleExport = () => {
+    // Export all fields from menuItems, using names for category, subcategory, and country
+    const data = menuItems.map((item) => {
+      const category = categories.find((c) => c.id === item.category_id)
+      const subcategory = subcategories.find((sc) => sc.id === item.subcategory_id)
+      const country = countries.find((co) => co.id === item.country_id)
+      return {
+        id: item.id,
+        name_en: item.name_en,
+        name_ar: item.name_ar,
+        description_en: item.description_en,
+        description_ar: item.description_ar,
+        price: item.price,
+        category: category ? category.name_en : item.category_id,
+        subcategory: subcategory ? subcategory.name_en : item.subcategory_id,
+        country: country ? country.name_en : item.country_id,
+        tags: Array.isArray(item.tags) ? item.tags.join(', ') : item.tags,
+        calories: item.calories,
+        allergens: Array.isArray(item.allergens) ? item.allergens.join(', ') : item.allergens,
+        visible: item.visible,
+        chef_special: item.chef_special,
+        popular: item.popular,
+        recommended: item.recommended,
+        available_from: item.available_from,
+        available_to: item.available_to,
+        available_days: Array.isArray(item.available_days) ? item.available_days.join(',') : item.available_days,
+        image: item.image,
+        order: item.order,
+      }
+    })
+    const ws = XLSX.utils.json_to_sheet(data)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'MenuItems')
+    XLSX.writeFile(wb, 'menu_items_export.xlsx')
+  }
+
   return (
     <>
       <Header
         title="Menu Items"
         subtitle="Manage dishes and their order"
         action={
-          <Button onClick={() => openCreate()} disabled={categories.length === 0}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add dish
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={handleExport} variant="primary" type="button">
+              Export
+            </Button>
+            <Button onClick={() => openCreate()} disabled={categories.length === 0}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add dish
+            </Button>
+          </div>
         }
       />
 
