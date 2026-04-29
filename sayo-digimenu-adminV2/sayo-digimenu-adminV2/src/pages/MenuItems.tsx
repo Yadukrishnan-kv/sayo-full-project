@@ -409,10 +409,24 @@ export function MenuItemsPage() {
   // Export handler
   const handleExport = () => {
     // Export all fields from menuItems, using names for category, subcategory, and country
+    const spiceOrder = ['mild', 'spicy', 'extra spicy'];
     const data = menuItems.map((item) => {
       const category = categories.find((c) => c.id === item.category_id)
       const subcategory = subcategories.find((sc) => sc.id === item.subcategory_id)
       const country = countries.find((co) => co.id === item.country_id)
+      // Only include spice tags, sort as Mild, Spicy, Extra Spicy
+      const spiceTags = (item.tags || [])
+        .map((tag) => tag.trim().toLowerCase())
+        .filter((tag) => spiceOrder.includes(tag))
+        .sort((a, b) => spiceOrder.indexOf(a) - spiceOrder.indexOf(b))
+        .map((tag) => tag.charAt(0).toUpperCase() + tag.slice(1));
+
+      // Highlights column: Chef Special, Popular, Recommended
+      const highlights = [];
+      if (item.chef_special) highlights.push('Chef Special');
+      if (item.popular) highlights.push('Popular');
+      if (item.recommended) highlights.push('Recommended');
+
       return {
         id: item.id,
         name_en: item.name_en,
@@ -424,6 +438,8 @@ export function MenuItemsPage() {
         subcategory: subcategory ? subcategory.name_en : item.subcategory_id,
         country: country ? country.name_en : item.country_id,
         tags: Array.isArray(item.tags) ? item.tags.join(', ') : item.tags,
+        'Spice level': spiceTags.join(', '),
+        Highlights: highlights.join(', '),
         calories: item.calories,
         allergens: Array.isArray(item.allergens) ? item.allergens.join(', ') : item.allergens,
         visible: item.visible,
