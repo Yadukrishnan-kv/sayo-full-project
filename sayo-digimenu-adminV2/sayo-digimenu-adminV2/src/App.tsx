@@ -20,6 +20,7 @@ import { SchedulingPage } from '@/pages/Scheduling'
 import { TranslationsPage } from '@/pages/Translations'
 import { SettingsPage } from '@/pages/Settings'
 import { CustomersPage } from '@/pages/Customers'
+import { ActivityLogPage } from '@/pages/ActivityLog'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = localStorage.getItem('authToken')
@@ -137,7 +138,7 @@ function App() {
     <ToastProvider>
       <ThemeSync />
       <FaviconSync />
-      <BrowserRouter basename='/admin'>
+      <BrowserRouter >
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route
@@ -162,6 +163,7 @@ function App() {
             <Route path="scheduling" element={<SchedulingPage />} />
             <Route path="translations" element={<TranslationsPage />} />
             <Route path="customers" element={<CustomersPage />} />
+            <Route path="activity-log" element={<ActivityLogPage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>
         </Routes>

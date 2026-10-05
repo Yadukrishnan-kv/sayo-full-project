@@ -85,10 +85,27 @@ const normalizeTagToken = (value) => String(value || '')
   .replace(/&/g, ' and ')
   .replace(/[^a-z0-9]+/g, '');
 
-const normalizeMenuItemTags = (body) => {
-  const tagList = Array.isArray(body.tags)
-    ? body.tags.map((tag) => String(tag || '').trim()).filter(Boolean)
-    : [];
+const normalizeMenuItemTags = (body, existingTags = []) => {
+  const hasTagsInBody = Object.prototype.hasOwnProperty.call(body, 'tags');
+  const hasBadgeFlags =
+    Object.prototype.hasOwnProperty.call(body, 'chef_special') ||
+    Object.prototype.hasOwnProperty.call(body, 'popular') ||
+    Object.prototype.hasOwnProperty.call(body, 'recommended');
+
+  // Nothing in this request touches tags/badges — leave the stored tags untouched
+  // instead of defaulting to [] (this used to silently wipe tags on every partial
+  // update, e.g. toggling visibility, drag-reordering, or flipping a single badge).
+  if (!hasTagsInBody && !hasBadgeFlags) {
+    delete body.tags;
+    return;
+  }
+
+  // Only replace the whole list when the client explicitly sent a new `tags` array
+  // (the admin edited the Tags field). Otherwise start from what's already stored
+  // so badge toggles merge in rather than clobber everything else.
+  const tagList = hasTagsInBody
+    ? (Array.isArray(body.tags) ? body.tags.map((tag) => String(tag || '').trim()).filter(Boolean) : [])
+    : existingTags.map((tag) => String(tag || '').trim()).filter(Boolean);
 
   const indexByToken = new Map();
   tagList.forEach((tag, idx) => {
@@ -125,14 +142,16 @@ const normalizeMenuItemTags = (body) => {
     }
   };
 
-  const hasBadgeFlags =
-    Object.prototype.hasOwnProperty.call(body, 'chef_special') ||
-    Object.prototype.hasOwnProperty.call(body, 'popular') ||
-    Object.prototype.hasOwnProperty.call(body, 'recommended');
-
-  if (hasBadgeFlags) {
+  // Only touch the tag(s) tied to a badge flag that was actually present in this
+  // request — applying all three unconditionally would erase e.g. an existing
+  // "Popular" tag whenever only "Chef Special" was toggled.
+  if (Object.prototype.hasOwnProperty.call(body, 'chef_special')) {
     upsertTag('Chef Special', ['chefspecial', 'chefsignature', 'chefspecialty', 'chefspeciality'], Boolean(body.chef_special));
+  }
+  if (Object.prototype.hasOwnProperty.call(body, 'popular')) {
     upsertTag('Popular', ['popular'], Boolean(body.popular));
+  }
+  if (Object.prototype.hasOwnProperty.call(body, 'recommended')) {
     upsertTag('Recommended', ['recommended', 'chefselection', 'chefsselection'], Boolean(body.recommended));
   }
 
@@ -267,11 +286,13 @@ app.post('/api/auth/login', async (req, res) => {
 
     const user = await User.findOne({ email });
     if (!user) {
+      await logActivity(req, email, 'auth', 'login_failed', null, { reason: 'unknown_email' });
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     const isPasswordValid = await bcryptjs.compare(password, user.passwordHash);
     if (!isPasswordValid) {
+      await logActivity(req, email, 'auth', 'login_failed', user._id, { reason: 'wrong_password' });
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
@@ -280,6 +301,8 @@ app.post('/api/auth/login', async (req, res) => {
       process.env.JWT_SECRET || 'sayo-dev-secret',
       { expiresIn: '8h' }
     );
+
+    await logActivity(req, user.email, 'auth', 'login', user._id, {});
 
     res.json({
       token,
@@ -558,7 +581,7 @@ app.post('/api/menu-items', authMiddleware, async (req, res) => {
     if (body.image) {
       body.image = await saveBase64Image(body.image, 'menu-items');
     }
-    normalizeMenuItemTags(body);
+    normalizeMenuItemTags(body, []);
     await attachCountrySnapshot(body);
     const item = await MenuItem.create(body);
     await logActivity(req, req.user.email, 'menu-items', 'create', item._id, item);
@@ -574,6 +597,10 @@ app.post('/api/menu-items', authMiddleware, async (req, res) => {
 
 app.put('/api/menu-items/:id', authMiddleware, async (req, res) => {
   try {
+    const existingItem = await MenuItem.findById(req.params.id);
+    if (!existingItem) {
+      return res.status(404).json({ error: 'Menu item not found' });
+    }
     const body = { ...req.body };
     if (!body.subcategory_id && body.classification_id) {
       body.subcategory_id = body.classification_id;
@@ -581,11 +608,11 @@ app.put('/api/menu-items/:id', authMiddleware, async (req, res) => {
     if (body.image) {
       body.image = await saveBase64Image(body.image, 'menu-items');
     }
-    normalizeMenuItemTags(body);
+    normalizeMenuItemTags(body, existingItem.tags);
     if (Object.prototype.hasOwnProperty.call(body, 'country_id')) {
       await attachCountrySnapshot(body);
     }
-    const item = await MenuItem.findByIdAndUpdate(req.params.id, body, { new: true });
+    const item = await MenuItem.findByIdAndUpdate(req.params.id, body, { new: true, runValidators: true });
     await logActivity(req, req.user.email, 'menu-items', 'update', item._id, body);
     res.json({
       ...toPlain(item),
@@ -850,12 +877,49 @@ app.delete('/api/media/:id', authMiddleware, async (req, res) => {
 
 // ============ ADMIN ROUTES - AUDIT LOG ============
 
-app.get('/api/audit-log', async (req, res) => {
+app.get('/api/audit-log', authMiddleware, async (req, res) => {
   try {
-    const logs = await ActivityLog.find()
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const pageSize = Math.min(100, Math.max(1, parseInt(req.query.pageSize, 10) || 20));
+
+    const filter = {};
+    if (req.query.module) filter.module = req.query.module;
+    if (req.query.action) filter.action = req.query.action;
+    if (req.query.userEmail) filter.userEmail = new RegExp(req.query.userEmail.trim(), 'i');
+    if (req.query.from || req.query.to) {
+      filter.createdAt = {};
+      if (req.query.from) filter.createdAt.$gte = new Date(req.query.from);
+      if (req.query.to) filter.createdAt.$lte = new Date(req.query.to);
+    }
+
+    const total = await ActivityLog.countDocuments(filter);
+    const logs = await ActivityLog.find(filter)
       .sort({ createdAt: -1 })
-      .limit(500);
-    res.json(logs.map(toPlain));
+      .skip((page - 1) * pageSize)
+      .limit(pageSize);
+
+    res.json({
+      data: logs.map(toPlain),
+      meta: {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.ceil(total / pageSize),
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/audit-log/view', authMiddleware, async (req, res) => {
+  try {
+    const { module } = req.body;
+    if (!module) {
+      return res.status(400).json({ error: 'module is required' });
+    }
+    await logActivity(req, req.user.email, module, 'view', null, {});
+    res.status(201).json({ ok: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -945,6 +1009,7 @@ const mapMenuItemForPublic = (req, item) => ({
   calories: item.calories,
   allergens: item.allergens,
   tags: item.tags,
+  dietary_type: item.dietary_type,
   country_code: item.country_code,
   country_name_en: item.country_name_en,
   country_name_ar: item.country_name_ar,

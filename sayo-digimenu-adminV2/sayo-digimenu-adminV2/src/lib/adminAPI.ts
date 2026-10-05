@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, AxiosError } from 'axios'
-import type { MenuSection, Category, Classification, SubCategory, Country, MenuItem, Banner, StorySection, FilterTag, Settings, MediaItem } from '@/types'
+import type { MenuSection, Category, Classification, SubCategory, Country, MenuItem, Banner, StorySection, FilterTag, Settings, MediaItem, ActivityLogEntry } from '@/types'
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL as string | undefined)?.trim() || 'http://localhost:5000'
 const APP_BASE_PATH = ((import.meta.env.BASE_URL as string | undefined) || '/').replace(/\/$/, '')
@@ -406,7 +406,7 @@ class AdminAPIClient {
     await this.client.delete(`/api/media/${id}`)
   }
 
-  // ============ ACTIVITY LOG ============
+  // ============ CUSTOMERS ============
 
   async getCustomers(page: number = 1, pageSize: number = 20) {
     const response = await this.client.get<{ data: any[]; meta: { page: number; pageSize: number; total: number; totalPages: number } }>(
@@ -418,6 +418,29 @@ class AdminAPIClient {
   async createCustomer(customer: { fullName: string; contactNumber: string; email: string; dateOfBirth?: string; anniversaryDate?: string }) {
     const response = await this.client.post('/api/customers', customer)
     return response.data
+  }
+
+  // ============ ACTIVITY LOG ============
+
+  async getActivityLog(params: {
+    page?: number
+    pageSize?: number
+    module?: string
+    action?: string
+    userEmail?: string
+  } = {}) {
+    const response = await this.client.get<{
+      data: ActivityLogEntry[]
+      meta: { page: number; pageSize: number; total: number; totalPages: number }
+    }>('/api/audit-log', { params })
+    return response.data
+  }
+
+  /** Fire-and-forget: records that the signed-in admin viewed a given menu/section. */
+  trackView(module: string) {
+    this.client.post('/api/audit-log/view', { module }).catch(() => {
+      // Non-critical — never let view tracking disrupt navigation.
+    })
   }
 }
 

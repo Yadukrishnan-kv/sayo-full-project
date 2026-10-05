@@ -40,6 +40,7 @@ export interface MenuItemData {
   calories?: number
   allergens?: string[]
   tags?: string[]
+  dietary_type?: 'vegetarian' | 'nonVegetarian' | 'egg' | null
   country_code?: string
   country_name_en?: string
   country_name_ar?: string
@@ -132,11 +133,7 @@ export interface MenuLayoutData {
   order: number
 }
 
-const API_BASE_URL = (import.meta.env.VITE_API_URL as string)?.trim();
-
-if (!API_BASE_URL) {
-  throw new Error('VITE_API_URL is not defined in the environment!');
-}
+export const API_BASE_URL = import.meta.env.VITE_API_URL?.trim()!;
 
 
 function extractArray<T>(payload: unknown): T[] {
@@ -388,7 +385,10 @@ class CustomerAPIClient {
    * Get vegetarian items
    */
   getVegetarianItems(items: MenuItemData[]): MenuItemData[] {
-    return items.filter((item) => item.tags?.includes('vegetarian'))
+    return items.filter((item) => {
+      if (item.dietary_type) return item.dietary_type === 'vegetarian'
+      return item.tags?.some((tag) => tag.trim().toLowerCase() === 'vegetarian') ?? false
+    })
   }
 
   /**

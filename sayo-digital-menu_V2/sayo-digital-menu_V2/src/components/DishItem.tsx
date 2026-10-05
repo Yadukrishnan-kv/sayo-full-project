@@ -3,6 +3,7 @@ import type { MenuItemData } from "@/lib/customerAPI";
 import type { DietaryTag } from "../types/filters";
 import { useTranslation } from "react-i18next";
 import { getCountryCodeForItem } from "@/lib/dataConverters";
+import { getDietaryInfo, getSpiceInfo } from "@/lib/dietary";
 import { AppIcon, getDietaryIconName } from "./AppIcon";
 import { IconWithTooltip } from "./IconWithTooltip";
 
@@ -20,20 +21,6 @@ const COUNTRY_CODE_TO_I18N: Record<string, string> = {
   SA: "countrySA",
 };
 
-type CardSpiceLevel = "mild" | "medium" | "hot";
-
-const SPICE_LABELS: Record<CardSpiceLevel, string> = {
-  mild: "spiceLevelMild",
-  medium: "spiceLevelMedium",
-  hot: "spiceLevelHot",
-};
-
-const SPICE_ICON_COUNT: Record<CardSpiceLevel, number> = {
-  mild: 1,
-  medium: 2,
-  hot: 3,
-};
-
 const CHEF_SIGNATURE_ALIASES = [
   "chefsignature",
   "chefspecial",
@@ -46,12 +33,6 @@ const CHEF_SIGNATURE_ALIASES = [
   "chefselection",
   "chefsselection",
 ];
-const VEGAN_ALIASES = ["vegan"];
-const VEGETARIAN_ALIASES = ["vegetarian", "veg"];
-const NON_VEGETARIAN_ALIASES = ["nonvegetarian", "nonveg", "nveg", "nv"];
-const CONTAINS_EGG_ALIASES = ["containsegg", "egg", "eggs"];
-const HOT_ALIASES = ["hot", "spicy"];
-const EXTRA_HOT_ALIASES = ["extrahot", "veryhot", "superhot", "extraspicy"];
 const POPULAR_ALIASES = ["popular"];
 
 function normalizeToken(value?: string | null): string {
@@ -113,27 +94,8 @@ export const DishItem: React.FC<Props> = ({ item, onOpen, index, resolvedCountry
     item.country_name_en ||
     item.country_name_ar ||
     (countryCode && COUNTRY_CODE_TO_I18N[countryCode] ? t(COUNTRY_CODE_TO_I18N[countryCode]) : countryCode);
-  const isNonVegetarian =
-    hasAnyAlias(normalizedTokens, NON_VEGETARIAN_ALIASES) ||
-    normalizedSection.includes("nonvegetarian");
-  const isVegan = hasAnyAlias(normalizedTokens, VEGAN_ALIASES);
-  const isVegetarian =
-    !isNonVegetarian &&
-    (hasAnyAlias(normalizedTokens, VEGETARIAN_ALIASES) ||
-      (normalizedSection.includes("vegetarian") && !normalizedSection.includes("nonvegetarian")));
-  const hasContainsEgg = hasAnyAlias(normalizedTokens, CONTAINS_EGG_ALIASES);
-  const hasExtraHotTag = hasAnyAlias(normalizedTokens, EXTRA_HOT_ALIASES);
-  const hasHotTag = hasAnyAlias(normalizedTokens, HOT_ALIASES);
-  const numericSpiceLevel = item.spice_level ?? 0;
-  const spiceLevel: CardSpiceLevel = hasExtraHotTag
-    ? "hot"
-    : hasHotTag
-      ? "medium"
-      : numericSpiceLevel >= 2
-        ? "hot"
-        : numericSpiceLevel >= 1
-          ? "medium"
-          : "mild";
+  const { isVegan, isVegetarian, isNonVegetarian, hasContainsEgg } = getDietaryInfo(item, item.section_id);
+  const spiceInfo = getSpiceInfo(item);
   const showCalories =
     typeof item.calories === "string"
       ? !!item.calories && String(item.calories).trim() !== ""
@@ -234,44 +196,17 @@ export const DishItem: React.FC<Props> = ({ item, onOpen, index, resolvedCountry
                 </span>
               </IconWithTooltip>
             )}
-            {/* Spice Level (only if tag present) */}
-            {(() => {
-              if (hasExtraHotTag) {
-                return (
-                  <IconWithTooltip label={t("spiceLevelExtraHot") || "Extra Hot"}>
-                    <span className="dish-item__spice dish-item__spice--hot" aria-hidden>
-                      {[...Array(3)].map((_, idx) => (
-                        <AppIcon key={`spice-hot-${idx}`} name="hot" size={12} strokeWidth={2} aria-hidden />
-                      ))}
-                      <span className="dish-item__spice-label">{t("spiceLevelExtraHot") || "Extra Hot"}</span>
-                    </span>
-                  </IconWithTooltip>
-                );
-              }
-              if (hasHotTag) {
-                return (
-                  <IconWithTooltip label={t("spiceLevelHot") || "Hot"}>
-                    <span className="dish-item__spice dish-item__spice--medium" aria-hidden>
-                      {[...Array(2)].map((_, idx) => (
-                        <AppIcon key={`spice-medium-${idx}`} name="hot" size={12} strokeWidth={2} aria-hidden />
-                      ))}
-                      <span className="dish-item__spice-label">{t("spiceLevelHot") || "Hot"}</span>
-                    </span>
-                  </IconWithTooltip>
-                );
-              }
-              if (normalizedTokens.has("mild")) {
-                return (
-                  <IconWithTooltip label={t("spiceLevelMild") || "Mild"}>
-                    <span className="dish-item__spice dish-item__spice--mild" aria-hidden>
-                      <AppIcon name="hot" size={12} strokeWidth={2} aria-hidden />
-                      <span className="dish-item__spice-label">{t("spiceLevelMild") || "Mild"}</span>
-                    </span>
-                  </IconWithTooltip>
-                );
-              }
-              return null;
-            })()}
+            {/* Spice Level (only if a spice tag is present) */}
+            {spiceInfo.level && (
+              <IconWithTooltip label={t(spiceInfo.labelKey!)}>
+                <span className={`dish-item__spice dish-item__spice--${spiceInfo.level}`} aria-hidden>
+                  {Array.from({ length: spiceInfo.iconCount }).map((_, idx) => (
+                    <AppIcon key={`spice-${spiceInfo.level}-${idx}`} name="hot" size={12} strokeWidth={2} aria-hidden />
+                  ))}
+                  <span className="dish-item__spice-label">{t(spiceInfo.labelKey!)}</span>
+                </span>
+              </IconWithTooltip>
+            )}
             {showCalories && (
               <IconWithTooltip label={`${item.calories} ${t("calories")}`}>
                 <span className="dish-item__calories-wrap">

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import {
@@ -20,11 +20,58 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { ImageUpload } from '@/components/forms/ImageUpload'
+import { MultiSelectDropdown } from '@/components/ui/MultiSelectDropdown'
 import { useStore } from '@/store/useStore'
 import { useToast } from '@/context/ToastContext'
 import { adminAPI } from '@/lib/adminAPI'
 import type { MenuItem as MenuItemType } from '@/types'
 import * as XLSX from 'xlsx'
+
+// Fixed, canonical tag options — picked from a dropdown so they always match exactly
+// what the customer site looks for (no more typos like "Veg"/"Extra spicy " mismatching).
+const TAG_OPTIONS = [
+  { value: 'Vegan', label: 'Vegan' },
+  { value: 'Mild', label: 'Mild' },
+  { value: 'Spicy', label: 'Spicy (Hot)' },
+  { value: 'Extra Spicy', label: 'Extra Spicy' },
+]
+
+function normalizeTagToken(tag: string): string {
+  return tag
+    .toLowerCase()
+    .trim()
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, '')
+}
+
+const CANONICAL_TAG_TOKENS = new Set(TAG_OPTIONS.map((o) => normalizeTagToken(o.value)))
+
+// Legacy dishes (created before the dedicated Dietary type field existed) only have this
+// info sitting in their free-text Tags. Infer it so editing an already-tagged old dish
+// doesn't force the admin to re-enter something the data already implies. Non-veg wins if
+// a dish is contradictorily tagged both ways, matching the customer site's own priority.
+const LEGACY_NON_VEGETARIAN_ALIASES = ['nonvegetarian', 'nonveg', 'nveg', 'nv']
+const LEGACY_VEGETARIAN_ALIASES = ['vegetarian', 'veg', 'vegan']
+const LEGACY_EGG_ALIASES = ['containsegg', 'egg', 'eggs']
+
+function inferDietaryTypeFromTags(tags: string[]): 'vegetarian' | 'nonVegetarian' | 'egg' | '' {
+  const tokens = new Set(tags.map((t) => normalizeTagToken(t)))
+  if (LEGACY_NON_VEGETARIAN_ALIASES.some((a) => tokens.has(a))) return 'nonVegetarian'
+  if (LEGACY_VEGETARIAN_ALIASES.some((a) => tokens.has(a))) return 'vegetarian'
+  if (LEGACY_EGG_ALIASES.some((a) => tokens.has(a))) return 'egg'
+  return ''
+}
+
+// Must match the customer site's DietaryTag union exactly (dairy/nuts/gluten/honey) —
+// anything else typed into a free-text box silently fell back to a generic icon.
+const ALLERGEN_OPTIONS = [
+  { value: 'dairy', label: 'Dairy' },
+  { value: 'nuts', label: 'Nuts' },
+  { value: 'gluten', label: 'Gluten' },
+  { value: 'honey', label: 'Honey' },
+]
+
+const CANONICAL_ALLERGEN_TOKENS = new Set(ALLERGEN_OPTIONS.map((o) => normalizeTagToken(o.value)))
 
 const schema = z.object({
   name_en: z.string().min(1, 'Name (EN) required'),
@@ -35,9 +82,13 @@ const schema = z.object({
   category_id: z.string().min(1, 'Category required'),
   subcategory_id: z.string().min(1, 'Sub-category is required'),
   country_id: z.string(),
-  tags: z.string(),
-  calories: z.union([z.string().min(0), z.number()]).transform((v) => (v === '' ? null : v)),
-  allergens: z.string(),
+  tags: z.array(z.string()),
+  dietary_type: z.enum(['vegetarian', 'nonVegetarian', 'egg', '']),
+  calories: z
+    .union([z.string().min(0), z.number()])
+    .nullable()
+    .transform((v) => (v === '' || v === null || v === undefined ? null : v)),
+  allergens: z.array(z.string()),
   visible: z.boolean(),
   chef_special: z.boolean(),
   popular: z.boolean(),
@@ -101,6 +152,20 @@ function SortableMenuItemRow({
       <td className="py-3 text-[var(--color-text-secondary)]">{countryName}</td>
       <td className="py-3 font-mono text-[var(--color-text-secondary)]">{item.price}</td>
       <td className="py-3">
+        {item.dietary_type === 'vegetarian' && (
+          <span className="rounded bg-green-100 px-1.5 py-0.5 text-xs dark:bg-green-900/30">Veg</span>
+        )}
+        {item.dietary_type === 'nonVegetarian' && (
+          <span className="rounded bg-red-100 px-1.5 py-0.5 text-xs dark:bg-red-900/30">Non-Veg</span>
+        )}
+        {item.dietary_type === 'egg' && (
+          <span className="rounded bg-yellow-100 px-1.5 py-0.5 text-xs dark:bg-yellow-900/30">Egg</span>
+        )}
+        {!item.dietary_type && (
+          <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-500 dark:bg-gray-800">Not set</span>
+        )}
+      </td>
+      <td className="py-3">
         <div className="flex gap-1">
           {item.chef_special && (
             <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs dark:bg-amber-900/30">Chef</span>
@@ -154,6 +219,7 @@ export function MenuItemsPage() {
     reset,
     watch,
     setValue,
+    control,
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -170,9 +236,10 @@ export function MenuItemsPage() {
         return subs[0]?.id ?? ''
       })(),
       country_id: '',
-      tags: '',
+      tags: [],
+      dietary_type: '',
       calories: null,
-      allergens: '',
+      allergens: [],
       visible: true,
       chef_special: false,
       popular: false,
@@ -202,9 +269,10 @@ export function MenuItemsPage() {
       category_id: firstCategoryId,
       subcategory_id: firstSubs[0]?.id ?? '',
       country_id: '',
-      tags: '',
+      tags: [],
+      dietary_type: '',
       calories: '' as unknown as number | null,
-      allergens: '',
+      allergens: [],
       visible: true,
       chef_special: false,
       popular: false,
@@ -234,9 +302,14 @@ export function MenuItemsPage() {
       category_id: item.category_id,
       subcategory_id: defaultSubId,
       country_id: item.country_id ?? '',
-      tags: item.tags.join(', '),
+      tags: TAG_OPTIONS.filter((opt) =>
+        item.tags.some((tg) => normalizeTagToken(tg) === normalizeTagToken(opt.value))
+      ).map((opt) => opt.value),
+      dietary_type: item.dietary_type ?? inferDietaryTypeFromTags(item.tags),
       calories: item.calories,
-      allergens: item.allergens.join(', '),
+      allergens: ALLERGEN_OPTIONS.filter((opt) =>
+        item.allergens.some((a) => normalizeTagToken(a) === normalizeTagToken(opt.value))
+      ).map((opt) => opt.value),
       visible: item.visible,
       chef_special: item.chef_special,
       popular: item.popular,
@@ -249,11 +322,25 @@ export function MenuItemsPage() {
   }
 
   const onSave = async (data: FormData) => {
-    const tags = data.tags ? data.tags.split(',').map((t) => t.trim()).filter(Boolean) : []
-    const allergens = data.allergens ? data.allergens.split(',').map((a) => a.trim()).filter(Boolean) : []
+    // Carry forward any tag the dish already had that isn't one of our dropdown's canonical
+    // options (e.g. the Chef Special/Popular/Recommended tags the backend manages itself) so
+    // saving from this dropdown can't silently delete tags this form doesn't manage.
+    const otherTags = editing
+      ? editing.tags.filter((tg) => !CANONICAL_TAG_TOKENS.has(normalizeTagToken(tg)))
+      : []
+    const tags = [...data.tags, ...otherTags]
+    const otherAllergens = editing
+      ? editing.allergens.filter((a) => !CANONICAL_ALLERGEN_TOKENS.has(normalizeTagToken(a)))
+      : []
+    const allergens = [...data.allergens, ...otherAllergens]
     const available_days = data.available_days
       ? data.available_days.split(',').map((d) => parseInt(d.trim(), 10)).filter((n) => !isNaN(n) && n >= 0 && n <= 6)
       : []
+
+    if (!data.dietary_type) {
+      toast('Please select a dietary type (Vegetarian / Non-Vegetarian / Contains Egg)', 'error')
+      return
+    }
 
     if (subcategoriesForCategory.length === 0) {
       toast('This category has no sub-categories. Add sub-categories first.', 'error')
@@ -278,10 +365,11 @@ export function MenuItemsPage() {
         price: data.price,
         category_id: data.category_id,
         subcategory_id: subcategoryId,
-        classification_id: null,
+        classification_id: editing ? editing.classification_id ?? null : null,
         country_id: countryId,
         image,
         tags,
+        dietary_type: data.dietary_type || null,
         calories: data.calories ?? null,
         allergens,
         visible: data.visible,
@@ -512,6 +600,7 @@ export function MenuItemsPage() {
                   <th className="py-3">Sub-category</th>
                   <th className="py-3">Country</th>
                   <th className="py-3">Price</th>
+                  <th className="py-3">Diet</th>
                   <th className="py-3">Badges</th>
                   <th className="py-3">Actions</th>
                 </tr>
@@ -639,8 +728,17 @@ export function MenuItemsPage() {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="mb-1 block text-sm font-medium">Tags (comma-separated)</label>
-              <input {...register('tags')} className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-4 py-2 text-[var(--color-text-primary)]" placeholder="e.g. Spicy, Vegan" />
+              <label className="mb-1 block text-sm font-medium">Dietary type (required)</label>
+              <select
+                {...register('dietary_type')}
+                className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-4 py-2 text-[var(--color-text-primary)]"
+              >
+                <option value="">— Select —</option>
+                <option value="vegetarian">Vegetarian</option>
+                <option value="nonVegetarian">Non-Vegetarian</option>
+                <option value="egg">Contains Egg</option>
+              </select>
+              {errors.dietary_type && <p className="mt-1 text-sm text-red-600">{errors.dietary_type.message}</p>}
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium">Calories</label>
@@ -648,8 +746,34 @@ export function MenuItemsPage() {
             </div>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium">Allergens (comma-separated)</label>
-            <input {...register('allergens')} className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-4 py-2 text-[var(--color-text-primary)]" placeholder="e.g. Nuts, Dairy" />
+            <label className="mb-1 block text-sm font-medium">Tags</label>
+            <Controller
+              name="tags"
+              control={control}
+              render={({ field }) => (
+                <MultiSelectDropdown
+                  options={TAG_OPTIONS}
+                  value={field.value}
+                  onChange={field.onChange}
+                  placeholder="Select tags"
+                />
+              )}
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium">Allergens</label>
+            <Controller
+              name="allergens"
+              control={control}
+              render={({ field }) => (
+                <MultiSelectDropdown
+                  options={ALLERGEN_OPTIONS}
+                  value={field.value}
+                  onChange={field.onChange}
+                  placeholder="Select allergens"
+                />
+              )}
+            />
           </div>
           <div className="flex flex-wrap gap-6">
             <label className="flex items-center gap-2">

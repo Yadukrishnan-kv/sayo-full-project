@@ -1,10 +1,26 @@
-import { Outlet } from 'react-router-dom'
+import { useEffect, useRef } from 'react'
+import { Outlet, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useAdminData } from '@/hooks/useAdminData'
+import { adminAPI } from '@/lib/adminAPI'
+import { getModuleSlugFromPath } from '@/lib/activityModules'
 import { Sidebar } from './Sidebar'
+
+function useTrackPageViews() {
+  const location = useLocation()
+  const lastTracked = useRef<string | null>(null)
+
+  useEffect(() => {
+    const slug = getModuleSlugFromPath(location.pathname)
+    if (lastTracked.current === slug) return
+    lastTracked.current = slug
+    adminAPI.trackView(slug)
+  }, [location.pathname])
+}
 
 export function MainLayout() {
   const { loading, error } = useAdminData()
+  useTrackPageViews()
 
   if (error && !loading) {
     return (

@@ -146,14 +146,15 @@ export function AppIcon({
 }
 
 /** Icon name for dietary (allergen) tags */
-export function getDietaryIconName(tag: DietaryTag): IconName {
+export function getDietaryIconName(tag: DietaryTag | string): IconName {
   const map: Record<DietaryTag, IconName> = {
     dairy: "dairy",
     nuts: "nuts",
     gluten: "gluten",
     honey: "honey",
   };
-  return map[tag] ?? "cuisine";
+  const normalized = String(tag || "").trim().toLowerCase() as DietaryTag;
+  return map[normalized] ?? "cuisine";
 }
 
 /** Icon name for highlight tags */

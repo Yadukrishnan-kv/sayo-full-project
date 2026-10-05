@@ -22,6 +22,7 @@ import {
   Moon,
   Users,
   LogOut,
+  History,
 } from 'lucide-react'
 
 const LOGO_LIGHT_THEME = '/assets/Logo_EN.svg'
@@ -59,6 +60,7 @@ const navItems = [
   { to: '/scheduling', icon: CalendarClock, label: 'Menu Scheduling' },
   { to: '/translations', icon: Languages, label: 'Translations' },
   { to: '/customers', icon: Users, label: 'Customers' },
+  { to: '/activity-log', icon: History, label: 'Activity Log' },
   { to: '/settings', icon: Settings, label: 'Settings' },
 ]
 

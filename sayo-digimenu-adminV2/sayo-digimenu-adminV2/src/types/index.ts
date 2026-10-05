@@ -44,6 +44,7 @@ export interface MenuItem {
   country_id: string | null
   image: string
   tags: string[]
+  dietary_type: 'vegetarian' | 'nonVegetarian' | 'egg' | null
   calories: string | number | null
   allergens: string[]
   visible: boolean
@@ -110,6 +111,16 @@ export interface Customer {
   anniversaryDate?: string
   createdAt: string
   updatedAt: string
+}
+
+export interface ActivityLogEntry {
+  id: string
+  userEmail: string
+  module: string
+  action: string
+  entityId: string | null
+  meta: Record<string, unknown>
+  createdAt: string
 }
 
 export type Language = 'en' | 'ar'

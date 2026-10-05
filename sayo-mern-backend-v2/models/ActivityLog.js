@@ -14,5 +14,7 @@ const ActivityLogSchema = new mongoose.Schema(
 // Create index for efficient queries
 ActivityLogSchema.index({ createdAt: -1 });
 ActivityLogSchema.index({ userEmail: 1 });
+ActivityLogSchema.index({ module: 1 });
+ActivityLogSchema.index({ action: 1 });
 
 module.exports = mongoose.model('ActivityLog', ActivityLogSchema);

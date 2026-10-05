@@ -67,8 +67,15 @@ const MenuItemSchema = new mongoose.Schema(
     },
     allergens: [String], // dairy, nuts, gluten, honey, etc.
 
+    // Dietary classification set explicitly via the admin panel (not inferred from tags)
+    dietary_type: {
+      type: String,
+      enum: ['vegetarian', 'nonVegetarian', 'egg'],
+      default: null,
+    },
+
     // Tags & Categorization
-    tags: [String], // chef_special, popular, recommended, vegan, vegetarian, etc.
+    tags: [String], // chef_special, popular, recommended, vegan, etc.
 
     // Badge flags used by admin panel
     chef_special: {

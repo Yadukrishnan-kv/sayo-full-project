@@ -113,6 +113,7 @@ export function CreateMenuItemExample() {
         calories: 0,
         allergens: [],
         tags: [],
+        dietary_type: 'vegetarian',
         chef_special: false,
         popular: false,
         recommended: false,

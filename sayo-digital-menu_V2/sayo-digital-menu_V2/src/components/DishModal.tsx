@@ -2,20 +2,14 @@ import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { MenuItemData, CategoryData } from "@/lib/customerAPI";
 import { useTranslation } from "react-i18next";
-import { getCountryCodeForItem, isVegetarianSection, countryCodeToFlag } from "@/lib/dataConverters";
+import { getCountryCodeForItem, countryCodeToFlag } from "@/lib/dataConverters";
+import { getDietaryInfo, getSpiceInfo, isDietaryToken } from "@/lib/dietary";
 import { AppIcon, getDietaryIconName } from "./AppIcon";
 import type { DietaryTag } from "../types/filters";
 
 const COUNTRY_CODE_TO_I18N: Record<string, string> = {
   IN: "india", JP: "japan", TH: "thailand", CN: "china", KR: "southKorea",
   LB: "lebanon", VN: "vietnam", MY: "malaysia", ID: "indonesia", SG: "singapore", SA: "countrySA",
-};
-
-const SPICE_LABELS: Record<number, string> = {
-  0: "spiceLevelMild",
-  1: "spiceLevelMedium",
-  2: "spiceLevelHot",
-  3: "spiceLevelExtreme",
 };
 
 const MODAL_BAR_BG = "#1e3a5f";
@@ -38,19 +32,6 @@ function normalizeTagToken(tag: string): string {
     .replace(/&/g, " and ")
     .replace(/[^a-z0-9]+/g, "");
 }
-
-const DIETARY_TAG_KEY_MAP: Record<string, "vegan" | "vegetarian" | "containsEgg" | "nonVegetarian"> = {
-  vegan: "vegan",
-  vegetarian: "vegetarian",
-  veg: "vegetarian",
-  containsegg: "containsEgg",
-  egg: "containsEgg",
-  eggs: "containsEgg",
-  nonvegetarian: "nonVegetarian",
-  nonveg: "nonVegetarian",
-  nveg: "nonVegetarian",
-  nv: "nonVegetarian",
-};
 
 const CHEF_SIGNATURE_ALIASES = [
   "chefsignature",
@@ -95,18 +76,22 @@ export const DishModal: React.FC<Props> = ({ item, onClose, category }) => {
     item.country_name_en ||
     item.country_name_ar ||
     (countryCode && COUNTRY_CODE_TO_I18N[countryCode] ? t(COUNTRY_CODE_TO_I18N[countryCode]) : countryCode);
-  const isVegetarian = isVegetarianSection(item.section_id);
-  const dietaryTagKeys = Array.from(
-    new Set(
-      Array.from(normalizedTokens)
-        .map((tag) => DIETARY_TAG_KEY_MAP[tag])
-        .filter(Boolean),
-    ),
-  );
+  const { isVegan, isVegetarian, isNonVegetarian, hasContainsEgg } = getDietaryInfo(item, item.section_id);
+  const spiceInfo = getSpiceInfo(item);
+  const showCalories =
+    typeof item.calories === "string"
+      ? !!item.calories && String(item.calories).trim() !== ""
+      : typeof item.calories === "number" && item.calories >= 1;
+  const dietaryTagKeys: Array<"vegan" | "vegetarian" | "nonVegetarian" | "containsEgg"> = [
+    ...(isVegan ? (["vegan"] as const) : []),
+    ...(isVegetarian ? (["vegetarian"] as const) : []),
+    ...(isNonVegetarian ? (["nonVegetarian"] as const) : []),
+    ...(hasContainsEgg ? (["containsEgg"] as const) : []),
+  ];
   const nonDietaryTags = (item.tags ?? []).filter((tag) => {
     const normalized = normalizeTagToken(tag);
     if (!normalized) return false;
-    if (DIETARY_TAG_KEY_MAP[normalized]) return false;
+    if (isDietaryToken(normalized)) return false;
     if (CHEF_SIGNATURE_ALIASES.includes(normalized)) return false;
     return true;
   });
@@ -114,7 +99,7 @@ export const DishModal: React.FC<Props> = ({ item, onClose, category }) => {
   const itemDescription =
     (isArabic ? item.description_ar : item.description_en) || item.description_en || item.description_ar;
   const categoryName =
-    (isArabic ? category?.name_ar : category?.name_en) || category?.name_en || category?.name_ar || item.section_id || item.category_id || "Menu";
+    (isArabic ? category?.name_ar : category?.name_en) || category?.name_en || category?.name_ar || item.section_id || "Menu";
   const subtitleText = item.section_id || categoryName;
   const highlightItems = Array.from(
     new Map(
@@ -204,7 +189,7 @@ export const DishModal: React.FC<Props> = ({ item, onClose, category }) => {
                   </div>
                 </div>
                 <div className="dish-modal__attributes">
-                  {item.calories && String(item.calories).trim() !== "" && (
+                  {showCalories && (
                     <span className="dish-modal__attr">
                       <AppIcon name="calories" size={16} strokeWidth={2} aria-hidden />
                       {item.calories} {t("calories")}
@@ -243,12 +228,6 @@ export const DishModal: React.FC<Props> = ({ item, onClose, category }) => {
                       <span className="dish-modal__flag">{countryCodeToFlag(countryCode)}</span>
                     </span>
                   )}
-                  {isVegetarian && (
-                    <span className="dish-modal__attr" title={t("vegetarianDish")}>
-                      <AppIcon name="vegetarian" size={16} strokeWidth={2} aria-hidden />
-                      {t("vegetarian")}
-                    </span>
-                  )}
                   {item.allergens?.map((a) => (
                     <span key={a} className="dish-modal__attr">
                       <AppIcon name={getDietaryIconName(a as DietaryTag)} size={16} strokeWidth={2} aria-hidden />
@@ -282,7 +261,7 @@ export const DishModal: React.FC<Props> = ({ item, onClose, category }) => {
                       ? dietaryTagKeys.map((tagKey) => (
                           <span key={tagKey} className="dish-modal__allergen-tag">{t(tagKey)}</span>
                         ))
-                      : (isVegetarian ? t("vegetarianDish") : t("nonVegetarian"))}
+                      : t("notSpecified")}
                   </span>
                 </div>
                 {highlightItems.length > 0 && (
@@ -300,13 +279,13 @@ export const DishModal: React.FC<Props> = ({ item, onClose, category }) => {
                     </span>
                   </div>
                 )}
-                <div className="dish-modal__detail-row">
-                  <span className="dish-modal__detail-label">{t("detailSpiceLevel")}</span>
-                  <span className="dish-modal__detail-value">
-                    {t(SPICE_LABELS[item.spice_level ?? (item.tags?.includes("extraHot") ? 3 : item.tags?.includes("hot") ? 2 : 0)] ?? "spiceLevelMild")}
-                  </span>
-                </div>
-                {item.calories && String(item.calories).trim() !== "" && (
+                {spiceInfo.level && (
+                  <div className="dish-modal__detail-row">
+                    <span className="dish-modal__detail-label">{t("detailSpiceLevel")}</span>
+                    <span className="dish-modal__detail-value">{t(spiceInfo.labelKey!)}</span>
+                  </div>
+                )}
+                {showCalories && (
                   <div className="dish-modal__detail-row">
                     <span className="dish-modal__detail-label">{t("detailCalories")}</span>
                     <span className="dish-modal__detail-value">
