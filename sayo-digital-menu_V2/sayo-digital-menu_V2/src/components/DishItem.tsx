@@ -58,9 +58,8 @@ interface Props {
 export const DishItem: React.FC<Props> = ({ item, onOpen, index, resolvedCountryName, resolvedCountryFlagUrl }) => {
   const { t, i18n } = useTranslation();
   const isArabic = i18n.language === "ar";
-  const itemName = (isArabic ? item.name_ar : item.name_en) || item.name_en || item.name_ar;
-  const itemDescription =
-    (isArabic ? item.description_ar : item.description_en) || item.description_en || item.description_ar;
+  const itemName = isArabic ? item.name_ar : item.name_en;
+  const itemDescription = isArabic ? item.description_ar : item.description_en;
 
   const normalizedTokens = new Set<string>();
   (item.tags ?? []).forEach((tag) => {

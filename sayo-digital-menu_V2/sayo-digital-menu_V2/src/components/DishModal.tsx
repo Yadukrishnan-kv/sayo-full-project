@@ -95,11 +95,10 @@ export const DishModal: React.FC<Props> = ({ item, onClose, category }) => {
     if (CHEF_SIGNATURE_ALIASES.includes(normalized)) return false;
     return true;
   });
-  const itemName = (isArabic ? item.name_ar : item.name_en) || item.name_en || item.name_ar;
-  const itemDescription =
-    (isArabic ? item.description_ar : item.description_en) || item.description_en || item.description_ar;
+  const itemName = isArabic ? item.name_ar : item.name_en;
+  const itemDescription = isArabic ? item.description_ar : item.description_en;
   const categoryName =
-    (isArabic ? category?.name_ar : category?.name_en) || category?.name_en || category?.name_ar || item.section_id || "Menu";
+    (isArabic ? category?.name_ar : category?.name_en) || item.section_id || "Menu";
   const subtitleText = item.section_id || categoryName;
   const highlightItems = Array.from(
     new Map(

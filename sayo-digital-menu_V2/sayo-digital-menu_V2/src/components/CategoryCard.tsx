@@ -11,9 +11,8 @@ interface Props {
 export const CategoryCard: React.FC<Props> = ({ category, index }) => {
   const { i18n } = useTranslation();
   const isArabic = i18n.language === "ar";
-  const categoryName = (isArabic ? category.name_ar : category.name_en) || category.name_en || category.name_ar;
-  const categoryDescription =
-    (isArabic ? category.description_ar : category.description_en) || category.description_en || category.description_ar;
+  const categoryName = isArabic ? category.name_ar : category.name_en;
+  const categoryDescription = isArabic ? category.description_ar : category.description_en;
 
   return (
     <motion.article

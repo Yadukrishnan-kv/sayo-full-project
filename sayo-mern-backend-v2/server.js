@@ -348,7 +348,7 @@ app.put('/api/menu-sections/:id', authMiddleware, async (req, res) => {
 app.delete('/api/menu-sections/:id', authMiddleware, async (req, res) => {
   try {
     const section = await MenuSection.findByIdAndDelete(req.params.id);
-    await logActivity(req, req.user.email, 'menu-sections', 'delete', req.params.id, {});
+    await logActivity(req, req.user.email, 'menu-sections', 'delete', req.params.id, { name_en: section?.name_en, name_ar: section?.name_ar });
     res.json({ message: 'Deleted' });
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -396,8 +396,8 @@ app.put('/api/categories/:id', authMiddleware, async (req, res) => {
 
 app.delete('/api/categories/:id', authMiddleware, async (req, res) => {
   try {
-    await Category.findByIdAndDelete(req.params.id);
-    await logActivity(req, req.user.email, 'categories', 'delete', req.params.id, {});
+    const category = await Category.findByIdAndDelete(req.params.id);
+    await logActivity(req, req.user.email, 'categories', 'delete', req.params.id, { name_en: category?.name_en, name_ar: category?.name_ar });
     res.json({ message: 'Deleted' });
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -437,8 +437,8 @@ app.put('/api/subcategories/:id', authMiddleware, async (req, res) => {
 
 app.delete('/api/subcategories/:id', authMiddleware, async (req, res) => {
   try {
-    await SubCategory.findByIdAndDelete(req.params.id);
-    await logActivity(req, req.user.email, 'subcategories', 'delete', req.params.id, {});
+    const subcategory = await SubCategory.findByIdAndDelete(req.params.id);
+    await logActivity(req, req.user.email, 'subcategories', 'delete', req.params.id, { name_en: subcategory?.name_en, name_ar: subcategory?.name_ar });
     res.json({ message: 'Deleted' });
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -486,8 +486,8 @@ app.put('/api/countries/:id', authMiddleware, async (req, res) => {
 
 app.delete('/api/countries/:id', authMiddleware, async (req, res) => {
   try {
-    await Country.findByIdAndDelete(req.params.id);
-    await logActivity(req, req.user.email, 'countries', 'delete', req.params.id, {});
+    const country = await Country.findByIdAndDelete(req.params.id);
+    await logActivity(req, req.user.email, 'countries', 'delete', req.params.id, { name_en: country?.name_en, name_ar: country?.name_ar });
     res.json({ message: 'Deleted' });
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -527,8 +527,8 @@ app.put('/api/classifications/:id', authMiddleware, async (req, res) => {
 
 app.delete('/api/classifications/:id', authMiddleware, async (req, res) => {
   try {
-    await Classification.findByIdAndDelete(req.params.id);
-    await logActivity(req, req.user.email, 'classifications', 'delete', req.params.id, {});
+    const classification = await Classification.findByIdAndDelete(req.params.id);
+    await logActivity(req, req.user.email, 'classifications', 'delete', req.params.id, { name_en: classification?.name_en, name_ar: classification?.name_ar });
     res.json({ message: 'Deleted' });
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -626,8 +626,8 @@ app.put('/api/menu-items/:id', authMiddleware, async (req, res) => {
 
 app.delete('/api/menu-items/:id', authMiddleware, async (req, res) => {
   try {
-    await MenuItem.findByIdAndDelete(req.params.id);
-    await logActivity(req, req.user.email, 'menu-items', 'delete', req.params.id, {});
+    const deletedItem = await MenuItem.findByIdAndDelete(req.params.id);
+    await logActivity(req, req.user.email, 'menu-items', 'delete', req.params.id, { name_en: deletedItem?.name_en, name_ar: deletedItem?.name_ar });
     res.json({ message: 'Deleted' });
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -667,8 +667,8 @@ app.put('/api/filter-tags/:id', authMiddleware, async (req, res) => {
 
 app.delete('/api/filter-tags/:id', authMiddleware, async (req, res) => {
   try {
-    await FilterTag.findByIdAndDelete(req.params.id);
-    await logActivity(req, req.user.email, 'filter-tags', 'delete', req.params.id, {});
+    const filterTag = await FilterTag.findByIdAndDelete(req.params.id);
+    await logActivity(req, req.user.email, 'filter-tags', 'delete', req.params.id, { label_en: filterTag?.label_en, label_ar: filterTag?.label_ar });
     res.json({ message: 'Deleted' });
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -987,7 +987,7 @@ const mapCategoryForPublic = (req, category) => ({
   name_en: category.name_en,
   name_ar: category.name_ar,
   description_en: category.description_en || category.description || '',
-  description_ar: category.description_ar || category.description_en || category.description || '',
+  description_ar: category.description_ar || '',
   description: category.description_en || category.description_ar || category.description || '',
   image_url: makeAbsoluteUrl(req, category.image),
   slug: category.slug,

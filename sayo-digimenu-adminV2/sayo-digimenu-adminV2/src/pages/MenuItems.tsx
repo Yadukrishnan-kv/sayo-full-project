@@ -419,8 +419,9 @@ export function MenuItemsPage() {
     if (!item) return
 
     try {
+      const { id: _omitId, _id: _omitMongoId, ...rest } = item as MenuItemType & { _id?: string }
       const duplicate = {
-        ...item,
+        ...rest,
         name_en: `${item.name_en} (Copy)`,
         name_ar: `${item.name_ar} (نسخة)`,
         order: menuItems.filter((m) => m.category_id === item.category_id).length,

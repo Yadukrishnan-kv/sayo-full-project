@@ -133,7 +133,11 @@ export interface MenuLayoutData {
   order: number
 }
 
-export const API_BASE_URL = import.meta.env.VITE_API_URL?.trim()!;
+const API_BASE_URL = (import.meta.env.VITE_API_URL as string)?.trim();
+
+if (!API_BASE_URL) {
+  throw new Error('VITE_API_URL is not defined in the environment!');
+}
 
 
 function extractArray<T>(payload: unknown): T[] {

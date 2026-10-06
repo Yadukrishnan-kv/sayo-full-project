@@ -11,6 +11,7 @@ import { Footer } from "../components/Footer";
 import { AppIcon } from "../components/AppIcon";
 import { CustomDropdown, type CustomDropdownOption } from "../components/CustomDropdown";
 import { useFilter } from "../context/FilterContext";
+import { getDietaryInfo } from "@/lib/dietary";
 
 type SubCategoryPayload = {
   _id?: string;
@@ -106,6 +107,13 @@ function getItemFilterTokens(item: MenuItemData, countryNamesById: Map<string, s
 
   item.tags?.forEach(addToken);
   item.allergens?.forEach(addToken);
+
+  const dietaryInfo = getDietaryInfo(item, item.section_id);
+  if (dietaryInfo.isVegan) addToken("vegan");
+  if (dietaryInfo.isVegetarian) addToken("vegetarian");
+  if (dietaryInfo.isNonVegetarian) addToken("nonvegetarian");
+  if (dietaryInfo.hasContainsEgg) addToken("containsegg");
+
   addToken(item.country_code);
   addToken(item.country_name_en);
   addToken(item.country_name_ar);
@@ -506,13 +514,13 @@ export const CategoryPage: React.FC = () => {
                   className="heading-xl"
                   style={{ margin: "0 0 0.15rem", fontSize: "1.35rem" }}
                 >
-                  {(isArabic ? category.name_ar : category.name_en) || category.name_en || category.name_ar}
+                  {isArabic ? category.name_ar : category.name_en}
                 </h1>
                 <p
                   className="body-sm-muted"
                   style={{ margin: 0, fontSize: "0.88rem" }}
                 >
-                  {(isArabic ? category.description_ar : category.description_en) || category.description_en || category.description_ar}
+                  {isArabic ? category.description_ar : category.description_en}
                 </p>
               </header>
 
