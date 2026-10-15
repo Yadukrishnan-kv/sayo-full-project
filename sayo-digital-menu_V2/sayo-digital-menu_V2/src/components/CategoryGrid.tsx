@@ -1,6 +1,51 @@
 import { useTranslation } from "react-i18next";
 import { useMenuContext } from "../context/MenuContext";
 import { CategoryCard } from "./CategoryCard";
+import type { OpeningHoursEntry } from "../lib/customerAPI";
+
+// day: 0=Sunday ... 6=Saturday. Displayed Monday-first to match the restaurant's week.
+const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
+const DAY_TRANSLATION_KEYS: Record<number, string> = {
+  0: "daySunday",
+  1: "dayMonday",
+  2: "dayTuesday",
+  3: "dayWednesday",
+  4: "dayThursday",
+  5: "dayFriday",
+  6: "daySaturday",
+};
+
+const DEFAULT_OPENING_HOURS: OpeningHoursEntry[] = [
+  { day: 0, closed1: false, closed2: false, open: "07:00", close: "11:00", open2: "11:30", close2: "23:30" },
+  { day: 1, closed1: false, closed2: false, open: "07:00", close: "11:00", open2: "11:30", close2: "23:30" },
+  { day: 2, closed1: false, closed2: false, open: "07:00", close: "11:00", open2: "11:30", close2: "23:30" },
+  { day: 3, closed1: false, closed2: false, open: "07:00", close: "11:00", open2: "11:30", close2: "23:30" },
+  { day: 4, closed1: false, closed2: false, open: "07:00", close: "11:00", open2: "11:30", close2: "00:00" },
+  { day: 5, closed1: false, closed2: false, open: "07:00", close: "11:00", open2: "11:30", close2: "00:00" },
+  { day: 6, closed1: false, closed2: false, open: "07:00", close: "11:00", open2: "11:30", close2: "23:30" },
+];
+
+function formatTime(time?: string): string {
+  if (!time) return "";
+  const [hoursStr, minutesStr] = time.split(":");
+  const hours = Number(hoursStr);
+  const minutes = Number(minutesStr);
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) return time;
+  const period = hours >= 12 ? "pm" : "am";
+  const displayHour = hours % 12 === 0 ? 12 : hours % 12;
+  const displayMinutes = minutes === 0 ? "" : `:${minutesStr.padStart(2, "0")}`;
+  return `${displayHour}${displayMinutes} ${period}`;
+}
+
+function formatHoursRange(entry: OpeningHoursEntry, closedLabel: string): string {
+  if (entry.closed1 && entry.closed2) return closedLabel;
+  const ranges: string[] = [];
+  if (!entry.closed1) ranges.push(`${formatTime(entry.open)}–${formatTime(entry.close)}`);
+  if (!entry.closed2 && entry.open2 && entry.close2) {
+    ranges.push(`${formatTime(entry.open2)}–${formatTime(entry.close2)}`);
+  }
+  return ranges.join(", ");
+}
 
 export const CategoryGrid: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -33,6 +78,9 @@ export const CategoryGrid: React.FC = () => {
       </section>
     );
   }
+
+  const openingHours = settings?.opening_hours?.length ? settings.opening_hours : DEFAULT_OPENING_HOURS;
+  const closedLabel = t("closedToday");
 
   const mainCategories = categories.filter((c) => c.category_id !== 'special' && c.category_id !== 'festive');
   const specialCategories = categories.filter((c) => c.category_id === 'special');
@@ -127,20 +175,17 @@ export const CategoryGrid: React.FC = () => {
               >
                 <div style={{ fontWeight: 600 }}>{t("openingHours")}</div>
                 <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", columnGap: "0.6rem", rowGap: "0.1rem" }}>
-                  {[
-                    ["Monday",    "7–11 am, 11:30 am–11:30 pm"],
-                    ["Tuesday",   "7–11 am, 11:30 am–11:30 pm"],
-                    ["Wednesday", "7–11 am, 11:30 am–11:30 pm"],
-                    ["Thursday",  "7–11 am, 11:30 am–12 am"],
-                    ["Friday",    "7–11 am, 11:30 am–12 am"],
-                    ["Saturday",  "7–11 am, 11:30 am–11:30 pm"],
-                    ["Sunday",    "7–11 am, 11:30 am–11:30 pm"],
-                  ].map(([day, hours]) => (
-                    <>
-                      <span key={day + "-day"} style={{ fontWeight: 500 }}>{day}</span>
-                      <span key={day + "-hours"}>{hours}</span>
-                    </>
-                  ))}
+                  {DAY_ORDER.map((day) => {
+                    const entry = openingHours.find((e) => e.day === day);
+                    const dayLabel = t(DAY_TRANSLATION_KEYS[day]);
+                    const hours = entry ? formatHoursRange(entry, closedLabel) : closedLabel;
+                    return (
+                      <>
+                        <span key={day + "-day"} style={{ fontWeight: 500 }}>{dayLabel}</span>
+                        <span key={day + "-hours"}>{hours}</span>
+                      </>
+                    );
+                  })}
                 </div>
                 <div style={{ fontWeight: 600, marginTop: "0.6rem" }}>{t("website")}</div>
                 <a href="https://www.sayosaudi.com" target="_blank" rel="noreferrer">

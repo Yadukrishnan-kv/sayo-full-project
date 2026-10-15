@@ -18,3 +18,13 @@ export const DAYS = [
   { value: 5, label: 'Friday' },
   { value: 6, label: 'Saturday' },
 ] as const
+
+export const DEFAULT_OPENING_HOURS = DAYS.map((d) => ({
+  day: d.value,
+  closed1: false,
+  closed2: false,
+  open: '07:00',
+  close: '11:00',
+  open2: '11:30',
+  close2: '23:30',
+}))

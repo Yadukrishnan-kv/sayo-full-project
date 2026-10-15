@@ -89,6 +89,17 @@ export interface MediaItem {
   size: number
 }
 
+/** One weekday's opening hours. day: 0=Sunday ... 6=Saturday (matches DAYS in lib/utils.ts). */
+export interface OpeningHoursEntry {
+  day: number
+  closed1: boolean // shift 1 closed
+  closed2: boolean // shift 2 closed
+  open: string   // shift 1 open, "HH:mm" 24-hour
+  close: string  // shift 1 close
+  open2?: string  // shift 2 open (e.g. after a prayer-time break)
+  close2?: string
+}
+
 export interface Settings {
   id?: string
   restaurant_name: string
@@ -100,6 +111,7 @@ export interface Settings {
   logo_light_url?: string
   favicon_url: string
   theme_mode: 'light' | 'dark' | 'system'
+  opening_hours?: OpeningHoursEntry[]
 }
 
 export interface Customer {

@@ -84,6 +84,17 @@ export interface StoryData {
   background_image?: string
 }
 
+/** One weekday's opening hours. day: 0=Sunday ... 6=Saturday. */
+export interface OpeningHoursEntry {
+  day: number
+  closed1: boolean // shift 1 closed
+  closed2: boolean // shift 2 closed
+  open: string   // shift 1 open, "HH:mm" 24-hour
+  close: string  // shift 1 close
+  open2?: string  // shift 2 open (e.g. after a prayer-time break)
+  close2?: string
+}
+
 export interface SettingsData {
   id: string
   restaurant_name: string
@@ -95,6 +106,7 @@ export interface SettingsData {
   logo_light_url?: string
   favicon_url?: string
   theme_mode?: string
+  opening_hours?: OpeningHoursEntry[]
 }
 
 export interface CustomerRecord {
@@ -280,9 +292,9 @@ class CustomerAPIClient {
   /**
    * Get app settings (logo / menu title / theme)
    */
-  async getSettings(): Promise<{ id: string; restaurant_name: string; restaurant_name_ar?: string; address_en?: string; address_ar?: string; logo_url?: string; logo_dark_url?: string; logo_light_url?: string; favicon_url?: string; theme_mode?: string }> {
+  async getSettings(): Promise<SettingsData> {
     const response = await this.client.get<unknown>('/api/settings')
-    const settings = extractObject<{ id: string; restaurant_name: string; restaurant_name_ar?: string; address_en?: string; address_ar?: string; logo_url?: string; logo_dark_url?: string; logo_light_url?: string; favicon_url?: string; theme_mode?: string }>(response.data)
+    const settings = extractObject<SettingsData>(response.data)
 
     return {
       ...settings,

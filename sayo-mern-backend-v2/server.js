@@ -776,6 +776,35 @@ app.put('/api/story/:id', authMiddleware, async (req, res) => {
 
 // ============ ADMIN ROUTES - SETTINGS ============
 
+// Default weekly hours, seeded from the restaurant's actual schedule
+// (two shifts on most days to account for the midday prayer-time break).
+const DEFAULT_OPENING_HOURS = [
+  { day: 0, closed1: false, closed2: false, open: '07:00', close: '11:00', open2: '11:30', close2: '23:30' }, // Sunday
+  { day: 1, closed1: false, closed2: false, open: '07:00', close: '11:00', open2: '11:30', close2: '23:30' }, // Monday
+  { day: 2, closed1: false, closed2: false, open: '07:00', close: '11:00', open2: '11:30', close2: '23:30' }, // Tuesday
+  { day: 3, closed1: false, closed2: false, open: '07:00', close: '11:00', open2: '11:30', close2: '23:30' }, // Wednesday
+  { day: 4, closed1: false, closed2: false, open: '07:00', close: '11:00', open2: '11:30', close2: '00:00' }, // Thursday
+  { day: 5, closed1: false, closed2: false, open: '07:00', close: '11:00', open2: '11:30', close2: '00:00' }, // Friday
+  { day: 6, closed1: false, closed2: false, open: '07:00', close: '11:00', open2: '11:30', close2: '23:30' }, // Saturday
+];
+
+// Migrates documents created before the per-shift closed flags existed
+// (old shape used a single day-level `closed` boolean).
+function migrateOpeningHoursEntry(entry) {
+  const plain = typeof entry.toObject === 'function' ? entry.toObject() : entry;
+  if (plain.closed1 !== undefined || plain.closed2 !== undefined) return plain;
+  const dayClosed = Boolean(plain.closed);
+  return {
+    day: plain.day,
+    closed1: dayClosed,
+    closed2: dayClosed,
+    open: plain.open,
+    close: plain.close,
+    open2: plain.open2,
+    close2: plain.close2,
+  };
+}
+
 app.get('/api/settings', async (req, res) => {
   try {
     let settings = await Settings.findOne();
@@ -790,6 +819,7 @@ app.get('/api/settings', async (req, res) => {
         logo_light_url: '',
         favicon_url: '/assets/Favicon.svg',
         theme_mode: 'light',
+        opening_hours: DEFAULT_OPENING_HOURS,
       });
     }
 
@@ -800,6 +830,19 @@ app.get('/api/settings', async (req, res) => {
       settings.logo_dark_url = settings.logo_dark_url ?? '/assets/Logo_EN.svg';
       settings.logo_light_url = settings.logo_light_url ?? '/assets/Logo_lgt_EN.svg';
       await settings.save();
+    }
+
+    if (!settings.opening_hours || settings.opening_hours.length === 0) {
+      settings.opening_hours = DEFAULT_OPENING_HOURS;
+      await settings.save();
+    } else {
+      const needsShiftMigration = settings.opening_hours.some(
+        (e) => e.closed1 === undefined && e.closed2 === undefined
+      );
+      if (needsShiftMigration) {
+        settings.opening_hours = settings.opening_hours.map(migrateOpeningHoursEntry);
+        await settings.save();
+      }
     }
 
     res.json({
@@ -813,6 +856,7 @@ app.get('/api/settings', async (req, res) => {
       logo_light_url: makeAbsoluteUrl(req, settings.logo_light_url),
       favicon_url: makeAbsoluteUrl(req, settings.favicon_url),
       theme_mode: settings.theme_mode,
+      opening_hours: settings.opening_hours,
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
