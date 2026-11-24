@@ -1,14 +1,122 @@
 import { useState } from 'react'
+import { useForm } from 'react-hook-form'
 import { Link, useNavigate } from 'react-router-dom'
 import { Header } from '@/components/layout/Header'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
+import { ImageUpload } from '@/components/forms/ImageUpload'
 import { useStore } from '@/store/useStore'
 import { useToast } from '@/context/ToastContext'
 import { adminAPI } from '@/lib/adminAPI'
 import { ImageIcon, Pencil, UtensilsCrossed, Plus, Layout, Trash2 } from 'lucide-react'
 import type { MenuSection } from '@/types'
+
+function OurMenuCardEditor() {
+  const ourMenuCard = useStore((s) => s.ourMenuCard)
+  const setOurMenuCard = useStore((s) => s.setOurMenuCard)
+  const toast = useToast()
+
+  const {
+    register,
+    handleSubmit,
+  } = useForm({
+    defaultValues: {
+      title: ourMenuCard.title,
+      title_ar: ourMenuCard.title_ar,
+      description: ourMenuCard.description,
+      description_ar: ourMenuCard.description_ar,
+    },
+  })
+
+  const onSubmit = async (data: {
+    title: string
+    title_ar: string
+    description: string
+    description_ar: string
+  }) => {
+    try {
+      const id = ourMenuCard.id
+      const payload = { ...data, image: ourMenuCard.image }
+      const updated = id ? await adminAPI.updateOurMenuCard(id, payload) : await adminAPI.getOurMenuCard()
+      setOurMenuCard(updated)
+      toast('Our Menu card saved', 'success')
+    } catch (error) {
+      console.error(error)
+      toast('Failed to save Our Menu card', 'error')
+    }
+  }
+
+  return (
+    <Card className="mt-8">
+      <h3 className="mb-1 flex items-center gap-2 font-semibold text-[var(--color-text-primary)]">
+        <ImageIcon className="h-5 w-5" />
+        Our Menu card
+      </h3>
+      <p className="mb-4 text-sm text-[var(--color-text-secondary)]">
+        The single entry card shown on the homepage that links visitors to the full menu.
+      </p>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-[var(--color-text-secondary)]">
+              Title (English)
+            </label>
+            <input
+              {...register('title')}
+              className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-4 py-2 text-[var(--color-text-primary)]"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-[var(--color-text-secondary)]">
+              Title (Arabic)
+            </label>
+            <input
+              {...register('title_ar')}
+              dir="rtl"
+              className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-4 py-2 text-[var(--color-text-primary)]"
+            />
+          </div>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-[var(--color-text-secondary)]">
+              Description (English)
+            </label>
+            <textarea
+              {...register('description')}
+              rows={3}
+              className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-4 py-2 text-[var(--color-text-primary)]"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-[var(--color-text-secondary)]">
+              Description (Arabic)
+            </label>
+            <textarea
+              {...register('description_ar')}
+              dir="rtl"
+              rows={3}
+              className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-4 py-2 text-[var(--color-text-primary)]"
+            />
+          </div>
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium text-[var(--color-text-secondary)]">
+            Image
+          </label>
+          <ImageUpload
+            value={ourMenuCard.image}
+            onChange={(url) => setOurMenuCard({ ...ourMenuCard, image: url })}
+          />
+        </div>
+        <Button type="submit">
+          Save Our Menu card
+        </Button>
+      </form>
+    </Card>
+  )
+}
 
 export function MenuLayoutPage() {
   const navigate = useNavigate()
@@ -140,6 +248,8 @@ export function MenuLayoutPage() {
           </Link>
         </div>
       </Card>
+
+      <OurMenuCardEditor />
 
       <div className="mt-8 space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-4">

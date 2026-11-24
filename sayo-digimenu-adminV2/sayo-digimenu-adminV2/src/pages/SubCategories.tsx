@@ -104,7 +104,7 @@ export function SubCategoriesPage() {
   const addSubCategory = useStore((s) => s.addSubCategory)
   const updateSubCategory = useStore((s) => s.updateSubCategory)
   const deleteSubCategory = useStore((s) => s.deleteSubCategory)
-  const reorderSubCategories = useStore((s) => s.reorderSubCategories)
+  const reorderSubCategoriesGlobal = useStore((s) => s.reorderSubCategoriesGlobal)
   const toast = useToast()
 
   const [modalOpen, setModalOpen] = useState(false)
@@ -145,7 +145,7 @@ export function SubCategoriesPage() {
         name_en: data.name_en,
         name_ar: data.name_ar,
         visible: data.visible,
-        order: subcategories.filter((item) => item.category_id === data.category_id).length,
+        order: editing ? editing.order : subcategories.length,
       }
 
       if (editing) {
@@ -186,23 +186,19 @@ export function SubCategoriesPage() {
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event
     if (!over || active.id === over.id) return
-    const activeSc = subcategories.find((s) => s.id === active.id)
-    const overSc = subcategories.find((s) => s.id === over.id)
-    if (!activeSc || !overSc || activeSc.category_id !== overSc.category_id) return
 
-    const inCat = subcategories
-      .filter((s) => s.category_id === activeSc.category_id)
-      .sort((a, b) => a.order - b.order)
-
-    const oldIndex = inCat.findIndex((s) => s.id === active.id)
-    const newIndex = inCat.findIndex((s) => s.id === over.id)
+    // Reorder against the full global list so sequence stays consistent
+    // across categories, even when the table is filtered to one category.
+    const fullList = [...subcategories].sort((a, b) => a.order - b.order)
+    const oldIndex = fullList.findIndex((s) => s.id === active.id)
+    const newIndex = fullList.findIndex((s) => s.id === over.id)
     if (oldIndex === -1 || newIndex === -1) return
 
-    const updatedList = [...inCat]
+    const updatedList = [...fullList]
     const [moved] = updatedList.splice(oldIndex, 1)
     updatedList.splice(newIndex, 0, moved)
 
-    reorderSubCategories(activeSc.category_id, oldIndex, newIndex)
+    reorderSubCategoriesGlobal(oldIndex, newIndex)
 
     try {
       await Promise.all(
@@ -217,16 +213,13 @@ export function SubCategoriesPage() {
   const filteredSubs = filterCategory
     ? subcategories.filter((s) => s.category_id === filterCategory)
     : subcategories
-  const sortedSubs = [...filteredSubs].sort((a, b) => {
-    if (a.category_id !== b.category_id) return 0
-    return a.order - b.order
-  })
+  const sortedSubs = [...filteredSubs].sort((a, b) => a.order - b.order)
 
   return (
     <>
       <Header
         title="Sub-Categories"
-        subtitle="Manage sub-category groups used by menu items"
+        subtitle="Drag to set the display order across all categories — this is the order shown on the public Our Menu page"
         action={
           <Button onClick={openCreate}>
             <Plus className="mr-2 h-4 w-4" />

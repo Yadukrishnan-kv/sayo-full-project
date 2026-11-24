@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, AxiosError } from 'axios'
-import type { MenuSection, Category, Classification, SubCategory, Country, MenuItem, Banner, StorySection, FilterTag, Settings, MediaItem, ActivityLogEntry } from '@/types'
+import type { MenuSection, Category, Classification, SubCategory, Country, MenuItem, Banner, StorySection, OurMenuCard, FilterTag, Settings, MediaItem, ActivityLogEntry } from '@/types'
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL as string | undefined)?.trim() || 'http://localhost:5000'
 const APP_BASE_PATH = ((import.meta.env.BASE_URL as string | undefined) || '/').replace(/\/$/, '')
@@ -352,6 +352,23 @@ class AdminAPIClient {
     return {
       ...response.data,
       background_image: toAbsoluteAssetUrl(response.data.background_image),
+    }
+  }
+
+  async getOurMenuCard() {
+    const response = await this.client.get<unknown>('/api/our-menu-card')
+    const card = extractObject<OurMenuCard>(response.data)
+    return {
+      ...card,
+      image: toAbsoluteAssetUrl(card.image),
+    }
+  }
+
+  async updateOurMenuCard(id: string, card: Partial<OurMenuCard>) {
+    const response = await this.client.put<OurMenuCard>(`/api/our-menu-card/${id}`, card)
+    return {
+      ...response.data,
+      image: toAbsoluteAssetUrl(response.data.image),
     }
   }
 

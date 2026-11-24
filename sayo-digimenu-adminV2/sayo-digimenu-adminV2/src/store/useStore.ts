@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { AppState, MenuSection, Category, Classification, SubCategory, Country, MenuItem, Banner, StorySection, FilterTag, MediaItem, Settings } from '@/types'
+import type { AppState, MenuSection, Category, Classification, SubCategory, Country, MenuItem, Banner, StorySection, OurMenuCard, FilterTag, MediaItem, Settings } from '@/types'
 import { getInitialState } from './initialData'
 
 const STORAGE_KEY = 'sayo-menu-admin'
@@ -32,6 +32,7 @@ type Store = AppState & {
   updateSubCategory: (id: string, data: Partial<SubCategory>) => void
   deleteSubCategory: (id: string) => void
   reorderSubCategories: (categoryId: string, startIndex: number, endIndex: number) => void
+  reorderSubCategoriesGlobal: (startIndex: number, endIndex: number) => void
 
   // Countries
   setCountries: (countries: Country[]) => void
@@ -50,6 +51,7 @@ type Store = AppState & {
   // Banner & Story
   setBanner: (banner: Banner) => void
   setStory: (story: StorySection) => void
+  setOurMenuCard: (ourMenuCard: OurMenuCard) => void
 
   // Filters
   setFilters: (filters: FilterTag[]) => void
@@ -175,6 +177,16 @@ setClassifications: (classifications: Classification[]) => set({ classifications
           return { subcategories: [...rest, ...reordered] }
         }),
 
+      reorderSubCategoriesGlobal: (startIndex, endIndex) =>
+        set((s) => {
+          const list = [...s.subcategories].sort((a, b) => a.order - b.order)
+          const [removed] = list.splice(startIndex, 1)
+          list.splice(endIndex, 0, removed)
+          return {
+            subcategories: list.map((sc, i) => ({ ...sc, order: i })),
+          }
+        }),
+
       // Countries
       setCountries: (countries) => set({ countries }),
 
@@ -240,6 +252,7 @@ setClassifications: (classifications: Classification[]) => set({ classifications
 
       setBanner: (banner) => set({ banner }),
       setStory: (story) => set({ story }),
+      setOurMenuCard: (ourMenuCard) => set({ ourMenuCard }),
 
       setFilters: (filters) => set({ filters }),
       updateFilter: (id, data) =>
@@ -266,6 +279,7 @@ setClassifications: (classifications: Classification[]) => set({ classifications
             menuItems: data.menuItems ?? s.menuItems,
             banner: data.banner ?? s.banner,
             story: data.story ?? s.story,
+            ourMenuCard: data.ourMenuCard ?? s.ourMenuCard,
             filters: data.filters ?? s.filters,
             media: data.media ?? s.media,
             settings: data.settings ?? s.settings,

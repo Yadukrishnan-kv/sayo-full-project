@@ -8,6 +8,7 @@ import {
   type StoryData,
   type SettingsData,
   type MenuLayoutData,
+  type OurMenuCardData,
 } from '@/lib/customerAPI'
 
 interface MenuContextType {
@@ -18,6 +19,7 @@ interface MenuContextType {
   story: StoryData | null
   settings: SettingsData | null
   menuLayout: MenuLayoutData[]
+  ourMenuCard: OurMenuCardData | null
   loading: boolean
   error: string | null
 }
@@ -32,6 +34,7 @@ export const MenuProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [story, setStory] = useState<StoryData | null>(null)
   const [settings, setSettings] = useState<SettingsData | null>(null)
   const [menuLayout, setMenuLayout] = useState<MenuLayoutData[]>([])
+  const [ourMenuCard, setOurMenuCard] = useState<OurMenuCardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -49,6 +52,7 @@ export const MenuProvider: React.FC<{ children: React.ReactNode }> = ({ children
           storyData,
           settingsData,
           layoutData,
+          ourMenuCardData,
         ] = await Promise.all([
           customerAPI.getCategories(),
           customerAPI.getAllMenuItems(),
@@ -57,6 +61,7 @@ export const MenuProvider: React.FC<{ children: React.ReactNode }> = ({ children
           customerAPI.getStory(),
           customerAPI.getSettings(),
           customerAPI.getMenuLayout(),
+          customerAPI.getOurMenuCard(),
         ])
 
         setCategories(categoriesData)
@@ -66,6 +71,7 @@ export const MenuProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setStory(storyData)
         setSettings(settingsData)
         setMenuLayout(layoutData)
+        setOurMenuCard(ourMenuCardData)
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to load menu data'
         setError(message)
@@ -88,6 +94,7 @@ export const MenuProvider: React.FC<{ children: React.ReactNode }> = ({ children
         story,
         settings,
         menuLayout,
+        ourMenuCard,
         loading,
         error,
       }}

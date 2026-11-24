@@ -145,6 +145,14 @@ export interface MenuLayoutData {
   order: number
 }
 
+export interface OurMenuCardData {
+  title: string
+  title_ar?: string
+  description: string
+  description_ar?: string
+  image?: string
+}
+
 const API_BASE_URL = (import.meta.env.VITE_API_URL as string)?.trim();
 
 if (!API_BASE_URL) {
@@ -311,6 +319,18 @@ class CustomerAPIClient {
   async getMenuLayout(): Promise<{ id: string; name_en: string; name_ar?: string; order: number }[]> {
     const response = await this.client.get<unknown>('/api/menu-layout')
     return extractArray<{ id: string; name_en: string; name_ar?: string; order: number }>(response.data)
+  }
+
+  /**
+   * Get the homepage "Our Menu" card content (title, description, image)
+   */
+  async getOurMenuCard(): Promise<OurMenuCardData> {
+    const response = await this.client.get<unknown>('/api/public/our-menu-card')
+    const card = extractObject<OurMenuCardData>(response.data)
+    return {
+      ...card,
+      image: toAbsoluteAssetUrl(card.image),
+    }
   }
 
   async createCustomer(customer: CustomerFormData): Promise<CustomerRecord> {

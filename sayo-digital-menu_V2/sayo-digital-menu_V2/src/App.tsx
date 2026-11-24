@@ -4,6 +4,7 @@ import { IconoirProvider } from "iconoir-react";
 import { Header } from "./components/Header";
 import { HomePage } from "./pages/HomePage";
 import { CategoryPage } from "./pages/CategoryPage";
+import { MenuPage } from "./pages/MenuPage";
 import { useTheme } from "./hooks/useTheme";
 import { useTranslation } from "react-i18next";
 import { AnimatePresence, motion } from "framer-motion";
@@ -56,6 +57,7 @@ const AppShell: React.FC = () => {
         >
           <Routes location={location}>
             <Route path="/" element={<HomePage />} />
+            <Route path="/menu" element={<MenuPage />} />
             <Route path="/category/:slug" element={<CategoryPage />} />
           </Routes>
         </motion.div>

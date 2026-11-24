@@ -72,6 +72,15 @@ export interface StorySection {
   background_image: string
 }
 
+export interface OurMenuCard {
+  id?: string
+  title: string
+  title_ar: string
+  description: string
+  description_ar: string
+  image: string
+}
+
 export interface FilterTag {
   id: string
   label_en: string
@@ -164,6 +173,7 @@ export interface AppState {
   menuItems: MenuItem[]
   banner: Banner
   story: StorySection
+  ourMenuCard: OurMenuCard
   filters: FilterTag[]
   media: MediaItem[]
   settings: Settings

@@ -27,6 +27,7 @@ export function useAdminData(options: UseAdminDataOptions = {}) {
   const setFilters = useStore((s) => s.setFilters)
   const setBanner = useStore((s) => s.setBanner)
   const setStory = useStore((s) => s.setStory)
+  const setOurMenuCard = useStore((s) => s.setOurMenuCard)
   const setSettings = useStore((s) => s.setSettings)
 
   // Check if logged in
@@ -49,7 +50,7 @@ export function useAdminData(options: UseAdminDataOptions = {}) {
     setError(null)
 
     try {
-      const [sections, categories, classifications, subcategories, countries, items, tags, banner, story, settings] = await Promise.all([
+      const [sections, categories, classifications, subcategories, countries, items, tags, banner, story, ourMenuCard, settings] = await Promise.all([
         adminAPI.getMenuSections(),
         adminAPI.getCategories(),
         adminAPI.getClassifications(),
@@ -59,6 +60,7 @@ export function useAdminData(options: UseAdminDataOptions = {}) {
         adminAPI.getFilterTags(),
         adminAPI.getBanner(),
         adminAPI.getStory(),
+        adminAPI.getOurMenuCard(),
         adminAPI.getSettings(),
       ])
 
@@ -72,6 +74,7 @@ export function useAdminData(options: UseAdminDataOptions = {}) {
       setFilters(tags)
       setBanner(banner)
       setStory(story)
+      setOurMenuCard(ourMenuCard)
       setSettings(settings)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load data'

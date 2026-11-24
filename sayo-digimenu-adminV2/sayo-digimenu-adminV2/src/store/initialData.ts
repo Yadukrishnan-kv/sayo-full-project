@@ -1,4 +1,4 @@
-import type { AppState, Banner, StorySection, Settings, FilterTag, MenuSection } from '@/types'
+import type { AppState, Banner, StorySection, OurMenuCard, Settings, FilterTag, MenuSection } from '@/types'
 
 const defaultBanner: Banner = {
   id: undefined,
@@ -13,6 +13,15 @@ const defaultStory: StorySection = {
   title: '',
   description: '',
   background_image: '',
+}
+
+const defaultOurMenuCard: OurMenuCard = {
+  id: undefined,
+  title: '',
+  title_ar: '',
+  description: '',
+  description_ar: '',
+  image: '',
 }
 
 const defaultSettings: Settings = {
@@ -50,6 +59,7 @@ export const getInitialState = (): AppState => ({
   menuItems: [],
   banner: defaultBanner,
   story: defaultStory,
+  ourMenuCard: defaultOurMenuCard,
   filters: defaultFilters,
   media: [],
   settings: defaultSettings,

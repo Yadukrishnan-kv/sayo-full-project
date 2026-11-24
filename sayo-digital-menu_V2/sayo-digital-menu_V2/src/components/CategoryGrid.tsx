@@ -1,6 +1,7 @@
+import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { useMenuContext } from "../context/MenuContext";
-import { CategoryCard } from "./CategoryCard";
 import type { OpeningHoursEntry } from "../lib/customerAPI";
 
 // day: 0=Sunday ... 6=Saturday. Displayed Monday-first to match the restaurant's week.
@@ -49,7 +50,7 @@ function formatHoursRange(entry: OpeningHoursEntry, closedLabel: string): string
 
 export const CategoryGrid: React.FC = () => {
   const { t, i18n } = useTranslation();
-  const { categories, loading, error, settings } = useMenuContext();
+  const { loading, error, settings, banner, ourMenuCard } = useMenuContext();
   const isArabic = i18n.language === "ar";
 
   if (loading) {
@@ -82,58 +83,41 @@ export const CategoryGrid: React.FC = () => {
   const openingHours = settings?.opening_hours?.length ? settings.opening_hours : DEFAULT_OPENING_HOURS;
   const closedLabel = t("closedToday");
 
-  const mainCategories = categories.filter((c) => c.category_id !== 'special' && c.category_id !== 'festive');
-  const specialCategories = categories.filter((c) => c.category_id === 'special');
-  const festiveCategories = categories.filter((c) => c.category_id === 'festive');
+  const ourMenuTitle = (isArabic ? ourMenuCard?.title_ar : ourMenuCard?.title) || ourMenuCard?.title || t("ourMenu");
+  const ourMenuDescription =
+    (isArabic ? ourMenuCard?.description_ar : ourMenuCard?.description) || ourMenuCard?.description || t("ourMenuDescription");
+  const ourMenuImage = ourMenuCard?.image || banner?.background_image;
 
   return (
     <>
       <section className="category-grid__section">
         <div className="container">
-          {mainCategories.length > 0 && (
-          <>
-            <h2 className="heading-lg category-grid__heading">
-              {t("menus")}
-            </h2>
-            <div className="category-grid__row">
-              {mainCategories.map((category, index) => (
-                <div key={category._id} className="category-grid__item">
-                  <CategoryCard category={category} index={index} />
-                </div>
-              ))}
+          <div className="category-grid__row">
+            <div className="category-grid__item">
+              <motion.article
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35 }}
+                className="our-menu-card"
+              >
+                <Link to="/menu" className="our-menu-card__link" aria-label={ourMenuTitle}>
+                  <div
+                    className="our-menu-card__media"
+                    style={{
+                      backgroundImage: ourMenuImage
+                        ? `url('${ourMenuImage}')`
+                        : "url('https://images.pexels.com/photos/958546/pexels-photo-958546.jpeg?auto=compress&cs=tinysrgb&w=1200')",
+                    }}
+                  />
+                  <div className="our-menu-card__body">
+                    <h2 className="heading-lg our-menu-card__title">{ourMenuTitle}</h2>
+                    <p className="body-sm-muted our-menu-card__description">{ourMenuDescription}</p>
+                    <span className="our-menu-card__cta">{t("viewOurMenu")}</span>
+                  </div>
+                </Link>
+              </motion.article>
             </div>
-          </>
-        )}
-
-          {specialCategories.length > 0 && (
-          <>
-            <h3 className="heading-lg category-grid__heading">
-              {t("specialMenus")}
-            </h3>
-            <div className="category-grid__row">
-              {specialCategories.map((category, index) => (
-                <div key={category._id} className="category-grid__item">
-                  <CategoryCard category={category} index={index} />
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-
-          {festiveCategories.length > 0 && (
-          <>
-            <h3 className="heading-lg category-grid__heading">
-              {t("festiveMenus")}
-            </h3>
-            <div className="category-grid__row">
-              {festiveCategories.map((category, index) => (
-                <div key={category._id} className="category-grid__item">
-                  <CategoryCard category={category} index={index} />
-                </div>
-              ))}
-            </div>
-          </>
-        )}
+          </div>
         </div>
       </section>
       <section className="category-grid__section">

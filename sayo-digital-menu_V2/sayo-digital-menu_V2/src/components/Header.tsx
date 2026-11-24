@@ -18,7 +18,7 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({ theme, onThemeChange, scrolled }) => {
   const { i18n, t } = useTranslation();
   const location = useLocation();
-  const isCategoryPage = location.pathname.startsWith("/category/");
+  const isCategoryPage = location.pathname.startsWith("/category/") || location.pathname === "/menu";
   const navigate = useNavigate();
   const [searchValue, setSearchValue] = useState("");
   const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);

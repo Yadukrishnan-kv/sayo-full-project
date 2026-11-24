@@ -17,6 +17,7 @@ const MenuSection = require('./models/MenuSection');
 const FilterTag = require('./models/FilterTag');
 const Banner = require('./models/Banner');
 const Story = require('./models/Story');
+const OurMenuCard = require('./models/OurMenuCard');
 const Settings = require('./models/Settings');
 const User = require('./models/User');
 const ActivityLog = require('./models/ActivityLog');
@@ -774,6 +775,57 @@ app.put('/api/story/:id', authMiddleware, async (req, res) => {
   }
 });
 
+app.get('/api/our-menu-card', async (req, res) => {
+  try {
+    let card = await OurMenuCard.findOne();
+    if (!card) {
+      card = await OurMenuCard.create({
+        title_en: 'Our Menu',
+        title_ar: 'قائمتنا',
+        description_en: 'Explore every dish, all in one place.',
+        description_ar: 'تصفح جميع الأطباق في مكان واحد.',
+      });
+    }
+    const plain = toPlain(card);
+    res.json({
+      id: plain.id,
+      title: plain.title_en,
+      title_ar: plain.title_ar,
+      description: plain.description_en,
+      description_ar: plain.description_ar,
+      image: plain.image,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.put('/api/our-menu-card/:id', authMiddleware, async (req, res) => {
+  try {
+    const body = { ...req.body };
+    if (body.title !== undefined) body.title_en = body.title;
+    if (body.title_ar !== undefined) body.title_ar = body.title_ar;
+    if (body.description !== undefined) body.description_en = body.description;
+    if (body.description_ar !== undefined) body.description_ar = body.description_ar;
+    if (body.image) {
+      body.image = await saveBase64Image(body.image, 'our-menu-card');
+    }
+    const card = await OurMenuCard.findByIdAndUpdate(req.params.id, body, { new: true });
+    await logActivity(req, req.user.email, 'our-menu-card', 'update', card._id, body);
+    const plain = toPlain(card);
+    res.json({
+      id: plain.id,
+      title: plain.title_en,
+      title_ar: plain.title_ar,
+      description: plain.description_en,
+      description_ar: plain.description_ar,
+      image: plain.image,
+    });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
 // ============ ADMIN ROUTES - SETTINGS ============
 
 // Default weekly hours, seeded from the restaurant's actual schedule
@@ -1134,6 +1186,29 @@ app.get('/api/public/categories', async (req, res) => {
     const categories = await Category.find({ visible: true }).sort({ order: 1 });
 
     res.json(categories.map((category) => mapCategoryForPublic(req, category)));
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/public/our-menu-card', async (req, res) => {
+  try {
+    let card = await OurMenuCard.findOne();
+    if (!card) {
+      card = await OurMenuCard.create({
+        title_en: 'Our Menu',
+        title_ar: 'قائمتنا',
+        description_en: 'Explore every dish, all in one place.',
+        description_ar: 'تصفح جميع الأطباق في مكان واحد.',
+      });
+    }
+    res.json({
+      title: card.title_en,
+      title_ar: card.title_ar,
+      description: card.description_en,
+      description_ar: card.description_ar,
+      image: makeAbsoluteUrl(req, card.image),
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

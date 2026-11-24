@@ -7,6 +7,7 @@ export const MODULE_LABELS: Record<string, string> = {
   'menu-sections': 'Menu Layout',
   banner: 'Banner',
   story: 'Story Section',
+  'our-menu-card': 'Our Menu Card',
   categories: 'Categories',
   subcategories: 'Sub-Categories',
   countries: 'Countries',
